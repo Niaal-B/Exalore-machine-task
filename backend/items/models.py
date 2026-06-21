@@ -16,6 +16,13 @@ class Item(models.Model):
         TAXABLE = "taxable", "Taxable"
         NON_TAXABLE = "non_taxable", "Non-taxable"
 
+    class Behaviour(models.TextChoices):
+        STOCK = "stock", "Stock Item"
+        PURCHASE = "purchase", "Purchase Item"
+        NON_STOCK = "non_stock", "Non Stock Item"
+        SERVICE = "service", "Service"
+        ASSEMBLY = "assembly", "Assembly"
+
     code = models.CharField(
         "item code",
         max_length=50,
@@ -27,9 +34,10 @@ class Item(models.Model):
     generic_name = models.CharField(max_length=255, blank=True)
     description = models.TextField(blank=True)
     behaviour = models.CharField(
-        max_length=50,
-        blank=True,
-        help_text="Business behaviour classification; allowed values are pending confirmation.",
+        max_length=20,
+        choices=Behaviour.choices,
+        default=Behaviour.STOCK,
+        help_text="Defines how the ERP handles the item.",
     )
     group_code = models.CharField(max_length=50, blank=True, db_index=True)
     status = models.CharField(

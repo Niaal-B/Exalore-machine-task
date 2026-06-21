@@ -109,3 +109,63 @@ class ItemUnit(models.Model):
 
     def __str__(self) -> str:
         return f"{self.item.code} - {self.unit}"
+
+
+class ItemPrice(models.Model):
+    """A unit-specific selling price within an item price-list type."""
+
+    item_unit = models.ForeignKey(
+        ItemUnit,
+        on_delete=models.CASCADE,
+        related_name="prices",
+        verbose_name="item unit",
+        help_text="Configured item unit to which this price applies.",
+    )
+    price_list_type = models.CharField(
+        "price list type",
+        max_length=50,
+        help_text="Pricing category, for example Retail or Wholesale.",
+    )
+    sale_price = models.DecimalField(
+        "sale price",
+        max_digits=18,
+        decimal_places=4,
+        validators=[MinValueValidator(Decimal("0"))],
+        help_text="Default selling price for this item unit.",
+    )
+    minimum_selling_price = models.DecimalField(
+        "minimum selling price",
+        max_digits=18,
+        decimal_places=4,
+        validators=[MinValueValidator(Decimal("0"))],
+        help_text="Lowest permitted selling price for this item unit.",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("item_unit_id", "price_list_type")
+        verbose_name = "item price"
+        verbose_name_plural = "item prices"
+        constraints = (
+            models.UniqueConstraint(
+                Lower("price_list_type"),
+                "item_unit",
+                name="unique_item_unit_price_list_type",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(sale_price__gte=0),
+                name="item_price_sale_non_negative",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(minimum_selling_price__gte=0),
+                name="item_price_min_non_negative",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(minimum_selling_price__lte=models.F("sale_price")),
+                name="item_price_min_lte_sale",
+            ),
+        )
+
+    def __str__(self) -> str:
+        return f"{self.item_unit.item.code} - {self.price_list_type} - {self.item_unit.unit}"

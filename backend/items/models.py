@@ -1,4 +1,8 @@
+from decimal import Decimal
+
+from django.core.validators import MinValueValidator
 from django.db import models
+from django.db.models.functions import Lower
 
 
 class Item(models.Model):
@@ -53,3 +57,55 @@ class Item(models.Model):
 
     def __str__(self) -> str:
         return f"{self.code} - {self.name}"
+
+
+class ItemUnit(models.Model):
+    """An item-specific unit of measure and its stock conversion factor."""
+
+    item = models.ForeignKey(
+        Item,
+        on_delete=models.CASCADE,
+        related_name="units",
+        verbose_name="item",
+        help_text="Item to which this unit configuration belongs.",
+    )
+    unit = models.CharField(
+        "unit",
+        max_length=50,
+        help_text="Unit name or code, for example Pcs or Box.",
+    )
+    co_factor = models.DecimalField(
+        "conversion factor",
+        max_digits=18,
+        decimal_places=6,
+        validators=[MinValueValidator(Decimal("0.000001"))],
+        help_text="Number of stock units represented by one of this unit.",
+    )
+    barcode = models.CharField(
+        max_length=100,
+        unique=True,
+        blank=True,
+        null=True,
+        help_text="Optional unique barcode for this item unit.",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("item_id", "unit")
+        verbose_name = "item unit"
+        verbose_name_plural = "item units"
+        constraints = (
+            models.UniqueConstraint(
+                Lower("unit"),
+                "item",
+                name="unique_case_insensitive_unit_per_item",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(co_factor__gt=0),
+                name="item_unit_co_factor_gt_zero",
+            ),
+        )
+
+    def __str__(self) -> str:
+        return f"{self.item.code} - {self.unit}"

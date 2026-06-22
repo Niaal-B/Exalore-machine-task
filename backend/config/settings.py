@@ -32,6 +32,7 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
     'items.apps.ItemsConfig',
+    'sales.apps.SalesConfig',
     'rest_framework',
     'drf_spectacular',
     'corsheaders',

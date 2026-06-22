@@ -1,0 +1,296 @@
+from decimal import Decimal
+
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models
+from django.utils import timezone
+
+from items.models import Item
+
+
+class SalesQuotation(models.Model):
+    """A customer quotation and its historically recorded totals."""
+
+    class Currency(models.TextChoices):
+        SAR = "SAR", "Saudi Riyal"
+        AED = "AED", "UAE Dirham"
+        QAR = "QAR", "Qatari Riyal"
+        KWD = "KWD", "Kuwaiti Dinar"
+        BHD = "BHD", "Bahraini Dinar"
+        OMR = "OMR", "Omani Rial"
+
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Draft"
+        CONFIRMED = "confirmed", "Confirmed"
+        CANCELLED = "cancelled", "Cancelled"
+
+    quotation_no = models.CharField(
+        "quotation number",
+        max_length=50,
+        unique=True,
+        help_text="Unique business document number for the quotation.",
+    )
+    quotation_date = models.DateField(
+        default=timezone.localdate,
+        db_index=True,
+        help_text="Business date on which the quotation was issued.",
+    )
+    customer_code = models.CharField(
+        max_length=50,
+        db_index=True,
+        help_text="Customer code captured when the quotation was created.",
+    )
+    customer_name = models.CharField(
+        max_length=255,
+        help_text="Customer name snapshot retained for historical accuracy.",
+    )
+    customer_ref_no = models.CharField(
+        "customer reference number",
+        max_length=100,
+        blank=True,
+    )
+    sales_executive = models.CharField(max_length=255, blank=True)
+    attention = models.CharField(max_length=255, blank=True)
+    pay_terms = models.CharField(
+        "payment terms",
+        max_length=255,
+        blank=True,
+    )
+    delivery_place = models.CharField(max_length=255, blank=True)
+    currency = models.CharField(
+        max_length=3,
+        choices=Currency.choices,
+    )
+    exchange_rate = models.DecimalField(
+        max_digits=18,
+        decimal_places=8,
+        validators=[MinValueValidator(Decimal("0.00000001"))],
+        help_text="Multiplier used to convert the document currency to base currency.",
+    )
+    notes = models.TextField(blank=True)
+    gross_amount = models.DecimalField(
+        max_digits=18,
+        decimal_places=4,
+        default=Decimal("0"),
+        validators=[MinValueValidator(Decimal("0"))],
+    )
+    discount_amount = models.DecimalField(
+        max_digits=18,
+        decimal_places=4,
+        default=Decimal("0"),
+        validators=[MinValueValidator(Decimal("0"))],
+    )
+    net_amount = models.DecimalField(
+        max_digits=18,
+        decimal_places=4,
+        default=Decimal("0"),
+        validators=[MinValueValidator(Decimal("0"))],
+    )
+    vat_amount = models.DecimalField(
+        "VAT amount",
+        max_digits=18,
+        decimal_places=4,
+        default=Decimal("0"),
+        validators=[MinValueValidator(Decimal("0"))],
+    )
+    net_after_vat = models.DecimalField(
+        "net after VAT",
+        max_digits=18,
+        decimal_places=4,
+        default=Decimal("0"),
+        validators=[MinValueValidator(Decimal("0"))],
+    )
+    status = models.CharField(
+        max_length=10,
+        choices=Status.choices,
+        default=Status.DRAFT,
+        db_index=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("-quotation_date", "-id")
+        verbose_name = "sales quotation"
+        verbose_name_plural = "sales quotations"
+        indexes = (
+            models.Index(
+                fields=("status", "quotation_date"),
+                name="sq_status_date_idx",
+            ),
+        )
+        constraints = (
+            models.CheckConstraint(
+                condition=models.Q(exchange_rate__gt=0),
+                name="sq_exchange_rate_gt_zero",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(gross_amount__gte=0),
+                name="sq_gross_non_negative",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(discount_amount__gte=0),
+                name="sq_discount_non_negative",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(discount_amount__lte=models.F("gross_amount")),
+                name="sq_discount_lte_gross",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(net_amount__gte=0),
+                name="sq_net_non_negative",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(vat_amount__gte=0),
+                name="sq_vat_non_negative",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(net_after_vat__gte=0),
+                name="sq_total_non_negative",
+            ),
+        )
+
+    def __str__(self) -> str:
+        return f"{self.quotation_no} - {self.customer_name}"
+
+
+class SalesQuotationLine(models.Model):
+    """A priced quotation line with immutable item-detail snapshots."""
+
+    quotation = models.ForeignKey(
+        SalesQuotation,
+        on_delete=models.CASCADE,
+        related_name="lines",
+        help_text="Quotation header to which this line belongs.",
+    )
+    line_no = models.PositiveIntegerField(
+        "line number",
+        validators=[MinValueValidator(1)],
+    )
+    item = models.ForeignKey(
+        Item,
+        on_delete=models.PROTECT,
+        related_name="sales_quotation_lines",
+        help_text="Current item reference retained for reporting and navigation.",
+    )
+    item_code = models.CharField(
+        max_length=50,
+        help_text="Item code snapshot captured when the quotation was created.",
+    )
+    item_name = models.CharField(
+        max_length=255,
+        help_text="Item name snapshot captured when the quotation was created.",
+    )
+    description = models.TextField(blank=True)
+    unit = models.CharField(
+        max_length=50,
+        help_text="Unit snapshot selected for this quotation line.",
+    )
+    quantity = models.DecimalField(
+        max_digits=18,
+        decimal_places=6,
+        validators=[MinValueValidator(Decimal("0.000001"))],
+    )
+    rate = models.DecimalField(
+        max_digits=18,
+        decimal_places=4,
+        validators=[MinValueValidator(Decimal("0"))],
+    )
+    discount_percentage = models.DecimalField(
+        max_digits=7,
+        decimal_places=4,
+        default=Decimal("0"),
+        validators=(
+            MinValueValidator(Decimal("0")),
+            MaxValueValidator(Decimal("100")),
+        ),
+    )
+    discount_amount = models.DecimalField(
+        max_digits=18,
+        decimal_places=4,
+        default=Decimal("0"),
+        validators=[MinValueValidator(Decimal("0"))],
+    )
+    vat_percentage = models.DecimalField(
+        "VAT percentage",
+        max_digits=7,
+        decimal_places=4,
+        default=Decimal("0"),
+        validators=(
+            MinValueValidator(Decimal("0")),
+            MaxValueValidator(Decimal("100")),
+        ),
+    )
+    vat_amount = models.DecimalField(
+        "VAT amount",
+        max_digits=18,
+        decimal_places=4,
+        default=Decimal("0"),
+        validators=[MinValueValidator(Decimal("0"))],
+    )
+    net_amount = models.DecimalField(
+        max_digits=18,
+        decimal_places=4,
+        validators=[MinValueValidator(Decimal("0"))],
+    )
+    net_after_vat = models.DecimalField(
+        "net after VAT",
+        max_digits=18,
+        decimal_places=4,
+        validators=[MinValueValidator(Decimal("0"))],
+    )
+
+    class Meta:
+        ordering = ("quotation_id", "line_no")
+        verbose_name = "sales quotation line"
+        verbose_name_plural = "sales quotation lines"
+        constraints = (
+            models.UniqueConstraint(
+                fields=("quotation", "line_no"),
+                name="unique_sq_line_number",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(line_no__gt=0),
+                name="sq_line_number_gt_zero",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(quantity__gt=0),
+                name="sq_line_quantity_gt_zero",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(rate__gte=0),
+                name="sq_line_rate_non_negative",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    discount_percentage__gte=0,
+                    discount_percentage__lte=100,
+                ),
+                name="sq_line_discount_pct_range",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(discount_amount__gte=0),
+                name="sq_line_discount_non_negative",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    vat_percentage__gte=0,
+                    vat_percentage__lte=100,
+                ),
+                name="sq_line_vat_pct_range",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(vat_amount__gte=0),
+                name="sq_line_vat_non_negative",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(net_amount__gte=0),
+                name="sq_line_net_non_negative",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(net_after_vat__gte=0),
+                name="sq_line_total_non_negative",
+            ),
+        )
+
+    def __str__(self) -> str:
+        return f"{self.quotation.quotation_no} - Line {self.line_no}"

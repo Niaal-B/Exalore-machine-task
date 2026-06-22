@@ -4,11 +4,11 @@ import {
   Barcode,
   Boxes,
   CheckCircle2,
-  Eraser,
   Image as ImageIcon,
   List,
   LoaderCircle,
   Package,
+  Plus,
   Save,
 } from "lucide-react"
 import {
@@ -116,6 +116,7 @@ export function ItemCreatePage() {
   const [photoUrl, setPhotoUrl] = useState("")
   const [photoInputKey, setPhotoInputKey] = useState(0)
   const [activeTab, setActiveTab] = useState("general")
+  const [isEditing, setIsEditing] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [errorMessage, setErrorMessage] = useState("")
@@ -235,6 +236,7 @@ export function ItemCreatePage() {
     try {
       const item = await createItem(buildRequest())
       resetFormValues()
+      setIsEditing(false)
       setSuccessMessage(
         "Item " + item.code + " was created successfully with ID " + item.id + ".",
       )
@@ -260,9 +262,10 @@ export function ItemCreatePage() {
     setActiveTab("general")
   }
 
-  function clearForm() {
+  function startNewItem() {
     resetFormValues()
     setSuccessMessage("")
+    setIsEditing(true)
   }
 
   return (
@@ -281,8 +284,14 @@ export function ItemCreatePage() {
               <h1 className="text-xl font-bold tracking-tight text-slate-900">
                 Item File
               </h1>
-              <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-700">
-                Draft
+              <span
+                className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${
+                  isEditing
+                    ? "bg-amber-50 text-amber-700"
+                    : "bg-slate-100 text-slate-500"
+                }`}
+              >
+                {isEditing ? "Draft" : "View mode"}
               </span>
             </div>
             <p className="mt-1 text-xs text-slate-400">
@@ -313,7 +322,7 @@ export function ItemCreatePage() {
         )}
       </div>
 
-      <fieldset disabled={isSubmitting}>
+      <fieldset disabled={!isEditing || isSubmitting}>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="flex gap-2 overflow-x-auto rounded-2xl border border-slate-200/80 bg-slate-100/70 p-2">
             <TabsTrigger value="general">
@@ -399,15 +408,15 @@ export function ItemCreatePage() {
           <Button
             type="button"
             variant="outline"
-            disabled={isSubmitting}
-            onClick={clearForm}
+            disabled={isEditing || isSubmitting}
+            onClick={startNewItem}
           >
-            <Eraser size={15} /> Clear
+            <Plus size={15} /> New
           </Button>
           <Button type="button" variant="secondary" disabled={isSubmitting}>
             <List size={15} /> View items
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
+          <Button type="submit" disabled={!isEditing || isSubmitting}>
             {isSubmitting ? (
               <LoaderCircle className="animate-spin" size={15} />
             ) : (

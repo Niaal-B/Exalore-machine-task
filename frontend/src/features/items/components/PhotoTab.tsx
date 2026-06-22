@@ -7,14 +7,18 @@ import type { ChangeEvent } from "react"
 import { FormSection } from "@/features/items/components/FormSection"
 
 type PhotoTabProps = {
+  inputKey: number
   photoName: string
   photoUrl: string
+  error?: string
   onPhotoChange: (event: ChangeEvent<HTMLInputElement>) => void
 }
 
 export function PhotoTab({
+  inputKey,
   photoName,
   photoUrl,
+  error,
   onPhotoChange,
 }: PhotoTabProps) {
   return (
@@ -22,9 +26,15 @@ export function PhotoTab({
       title="Item Photo"
       description="Upload a clear image for catalogues and item identification"
     >
+      {error && (
+        <p className="mb-4 rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-600">
+          {error}
+        </p>
+      )}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <label className="group flex min-h-72 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/60 px-6 text-center transition-colors hover:border-indigo-300 hover:bg-indigo-50/30">
           <input
+            key={inputKey}
             type="file"
             accept="image/png,image/jpeg,image/webp"
             className="sr-only"

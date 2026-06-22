@@ -8,11 +8,13 @@ import { cn } from "@/lib/utils"
 export function FormField({
   label,
   required,
+  error,
   children,
   className,
 }: {
   label: string
   required?: boolean
+  error?: string
   children: ReactNode
   className?: string
 }) {
@@ -23,6 +25,11 @@ export function FormField({
         {required && <span className="ml-1 text-rose-500">*</span>}
       </span>
       {children}
+      {error && (
+        <span className="mt-1.5 block text-[11px] font-medium text-rose-600">
+          {error}
+        </span>
+      )}
     </label>
   )
 }

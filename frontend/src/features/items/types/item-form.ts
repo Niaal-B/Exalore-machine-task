@@ -1,14 +1,21 @@
+import type { CreateItemRequest } from "@/features/items/types/item"
+
+export type ItemGeneralValues = Omit<
+  CreateItemRequest,
+  "image" | "units"
+>
+
 export type UnitRow = {
   id: number
   unit: string
-  coFactor: string
+  co_factor: string
   barcode: string
 }
 
 export type PriceRow = {
   id: number
-  priceListType: string
+  price_list_type: string
   unit: string
-  salePrice: string
-  minimumPrice: string
+  sale_price: string
+  minimum_selling_price: string
 }

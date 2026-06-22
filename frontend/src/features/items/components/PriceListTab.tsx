@@ -14,6 +14,7 @@ type PriceField = keyof Omit<PriceRow, "id">
 type PriceListTabProps = {
   prices: PriceRow[]
   units: UnitRow[]
+  errors: Record<string, string>
   onAdd: () => void
   onRemove: (id: number) => void
   onUpdate: (id: number, field: PriceField, value: string) => void
@@ -22,10 +23,29 @@ type PriceListTabProps = {
 export function PriceListTab({
   prices,
   units,
+  errors,
   onAdd,
   onRemove,
   onUpdate,
 }: PriceListTabProps) {
+  function getErrorPath(row: PriceRow, rowIndex: number, field: string) {
+    const unitIndex = units.findIndex((unit) => unit.unit === row.unit)
+    const priceIndex = prices
+      .slice(0, rowIndex)
+      .filter((price) => price.unit === row.unit).length
+
+    return unitIndex < 0
+      ? undefined
+      : errors[
+          "units." +
+            unitIndex +
+            ".prices." +
+            priceIndex +
+            "." +
+            field
+        ]
+  }
+
   return (
     <FormSection
       title="Price List"
@@ -54,26 +74,34 @@ export function PriceListTab({
           <span />
         </div>
         <div className="divide-y divide-slate-100">
-          {prices.map((row) => (
+          {prices.map((row, index) => (
             <div
               key={row.id}
               className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-[1fr_0.8fr_1fr_1fr_48px]"
             >
               <FormField
                 label="Price List Type"
-                className="lg:[&>span]:hidden"
+                error={getErrorPath(row, index, "price_list_type")}
+                className="lg:[&>span:first-child]:hidden"
               >
                 <SelectField
-                  value={row.priceListType}
+                  value={row.price_list_type}
                   onChange={(event) =>
-                    onUpdate(row.id, "priceListType", event.target.value)
+                    onUpdate(
+                      row.id,
+                      "price_list_type",
+                      event.target.value,
+                    )
                   }
                 >
                   <option>Retail</option>
                   <option>Wholesale</option>
                 </SelectField>
               </FormField>
-              <FormField label="Unit" className="lg:[&>span]:hidden">
+              <FormField
+                label="Unit"
+                className="lg:[&>span:first-child]:hidden"
+              >
                 <SelectField
                   value={row.unit}
                   onChange={(event) =>
@@ -87,28 +115,41 @@ export function PriceListTab({
                   ))}
                 </SelectField>
               </FormField>
-              <FormField label="Sale Price" className="lg:[&>span]:hidden">
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={row.salePrice}
-                  onChange={(event) =>
-                    onUpdate(row.id, "salePrice", event.target.value)
-                  }
-                />
-              </FormField>
               <FormField
-                label="Minimum Selling Price"
-                className="lg:[&>span]:hidden"
+                label="Sale Price"
+                error={getErrorPath(row, index, "sale_price")}
+                className="lg:[&>span:first-child]:hidden"
               >
                 <Input
                   type="number"
                   min="0"
                   step="0.01"
-                  value={row.minimumPrice}
+                  value={row.sale_price}
                   onChange={(event) =>
-                    onUpdate(row.id, "minimumPrice", event.target.value)
+                    onUpdate(row.id, "sale_price", event.target.value)
+                  }
+                />
+              </FormField>
+              <FormField
+                label="Minimum Selling Price"
+                error={getErrorPath(
+                  row,
+                  index,
+                  "minimum_selling_price",
+                )}
+                className="lg:[&>span:first-child]:hidden"
+              >
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={row.minimum_selling_price}
+                  onChange={(event) =>
+                    onUpdate(
+                      row.id,
+                      "minimum_selling_price",
+                      event.target.value,
+                    )
                   }
                 />
               </FormField>

@@ -50,7 +50,7 @@ const navSections: { label: string; items: NavItem[] }[] = [
   {
     label: "Sales",
     items: [
-      { label: "Sales Quotations", icon: ClipboardList, href: "#" },
+      { label: "Sales Quotations", icon: ClipboardList, href: "/sales-quotations/new" },
       { label: "Sales Orders", icon: ReceiptText, href: "#" },
       { label: "Sales Invoices", icon: FileText, href: "#" },
     ],

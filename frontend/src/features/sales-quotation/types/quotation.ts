@@ -26,21 +26,16 @@ export interface QuotationLine {
 }
 
 export interface QuotationForm {
-  quotationNo: string
   quotationDate: string
-  customerId: string
+  customerId?: number
+  customerCode: string
+  customerName: string
   customerRefNo: string
   salesExecutive: string
   attention: string
   payTerms: string
   deliveryPlace: string
-  currency: QuotationCurrency
+  currency: string
   exchangeRate: string
   notes: string
-  grossAmount: string
-  discountAmount: string
-  netAmount: string
-  vatAmount: string
-  netAfterVat: string
-  lines: QuotationLine[]
 }

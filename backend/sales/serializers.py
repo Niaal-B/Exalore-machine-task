@@ -354,35 +354,10 @@ class SalesQuotationSerializer(serializers.ModelSerializer):
         quotation.save()
         return quotation
 
-    @transaction.atomic 
-    def update(self, instance, validated_data):
-        quotation = SalesQuotation.objects.select_for_update().get(pk=instance.pk)
-        if quotation.status != SalesQuotation.Status.DRAFT:
-            raise serializers.ValidationError(
-                {"status": "Only draft quotations can be edited."}
-            )
 
-        lines_data = validated_data.pop("lines", None)
-        if lines_data is not None:
-            prepared_lines = [
-                prepare_line_data(line_data) for line_data in lines_data
-            ]
-            quotation.lines.all().delete()
-            for line_no, (values, _) in enumerate(prepared_lines, start=1):
-                SalesQuotationLine.objects.create(
-                    quotation=quotation,
-                    line_no=line_no,
-                    **values,
-                )
-            validated_data.update(self._document_totals(prepared_lines))
-
-        customer = validated_data.get("customer")
-        if customer:
-            validated_data["customer_code"] = customer.code
-            validated_data["customer_name"] = customer.name
-
-        for field, value in validated_data.items():
-            setattr(quotation, field, value)
-        quotation.save()
-        return quotation
+class CustomerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Customer
+        fields = ("id", "code", "name")
+        read_only_fields = fields
 

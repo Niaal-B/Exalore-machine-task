@@ -2,8 +2,18 @@ from django.db.models import Prefetch
 from rest_framework import filters, viewsets
 from rest_framework.exceptions import ValidationError
 
-from .models import SalesQuotation, SalesQuotationLine
-from .serializers import SalesQuotationSerializer
+from .models import Customer, SalesQuotation, SalesQuotationLine
+from .serializers import CustomerSerializer, SalesQuotationSerializer
+
+
+class CustomerViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Customer.objects.filter(is_active=True)
+    serializer_class = CustomerSerializer
+    filter_backends = (filters.SearchFilter, filters.OrderingFilter)
+    search_fields = ("code", "name")
+    ordering_fields = ("code", "name")
+    ordering = ("code",)
+    http_method_names = ("get", "head", "options")
 
 
 class SalesQuotationViewSet(viewsets.ModelViewSet):

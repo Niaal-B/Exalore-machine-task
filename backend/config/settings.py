@@ -122,6 +122,8 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+SALES_DEFAULT_VAT_PERCENTAGE = "15.0000"
+
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",

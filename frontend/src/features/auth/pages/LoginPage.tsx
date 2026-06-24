@@ -109,6 +109,26 @@ export function LoginPage() {
             </p>
           </div>
 
+          <div
+            onClick={() => setCredentials({ username: "admin", password: "qwerty" })}
+            className="mb-6 cursor-pointer rounded-xl border border-indigo-200 bg-indigo-50/50 p-4 transition-colors hover:bg-indigo-50"
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault()
+                setCredentials({ username: "admin", password: "qwerty" })
+              }
+            }}
+          >
+            <p className="mb-1 text-sm font-medium text-indigo-900">Admin Credentials</p>
+            <div className="flex items-center gap-4 text-sm text-indigo-700">
+              <span className="flex items-center gap-1.5"><UserRound size={14} /> admin</span>
+              <span className="flex items-center gap-1.5"><LockKeyhole size={14} /> qwerty</span>
+            </div>
+            <p className="mt-2 text-xs text-indigo-500 font-medium">Click anywhere here to autofill</p>
+          </div>
+
           <form className="space-y-5" onSubmit={submit}>
             {error && (
               <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-sm">

@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom"
 
 import { ErpLayout } from "@/app/layouts/ErpLayout"
 import { ItemCreatePage } from "@/features/items/pages/ItemCreatePage"
+import { SalesOrderCreatePage } from "@/features/sales-order/pages/SalesOrderCreatePage"
 import { SalesQuotationCreatePage } from "@/features/sales-quotation/pages/SalesQuotationCreatePage"
 
 export function AppRouter() {
@@ -11,6 +12,7 @@ export function AppRouter() {
         <Route index element={<Navigate to="/sales-quotations/new" replace />} />
         <Route path="/items/new" element={<ItemCreatePage />} />
         <Route path="/sales-quotations/new" element={<SalesQuotationCreatePage />} />
+        <Route path="/sales-orders/new" element={<SalesOrderCreatePage />} />
       </Route>
     </Routes>
   )

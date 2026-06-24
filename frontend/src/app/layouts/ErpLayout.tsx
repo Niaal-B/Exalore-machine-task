@@ -50,7 +50,7 @@ const navSections: { label: string; items: NavItem[] }[] = [
     label: "Sales",
     items: [
       { label: "Sales Quotations", icon: ClipboardList, href: "/sales-quotations/new" },
-      { label: "Sales Orders", icon: ReceiptText, href: "#" },
+      { label: "Sales Orders", icon: ReceiptText, href: "/sales-orders/new" },
       { label: "Sales Invoices", icon: FileText, href: "#" },
     ],
   },
@@ -70,6 +70,7 @@ const routeLabels = [
     section: "Sales",
     page: "Sales Quotations",
   },
+  { path: "/sales-orders", section: "Sales", page: "Sales Orders" },
 ]
 
 export function ErpLayout() {

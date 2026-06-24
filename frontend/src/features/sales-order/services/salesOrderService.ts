@@ -11,3 +11,15 @@ export async function createSalesOrder(
   )
   return response.data
 }
+
+export async function listSalesOrders(params: {
+  search?: string
+  status?: string
+  currency?: string
+  ordering?: string
+}): Promise<CreateSalesOrderResponse[]> {
+  const response = await apiClient.get<
+    CreateSalesOrderResponse[] | { results: CreateSalesOrderResponse[] }
+  >("/api/sales-orders/", { params })
+  return Array.isArray(response.data) ? response.data : response.data.results
+}

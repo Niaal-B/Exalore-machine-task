@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button"
+import { Link } from "react-router-dom"
 
 type OrderActionBarProps = {
   isEditing: boolean
@@ -69,6 +70,9 @@ export function OrderActionBar({
         onClick={onClear}
       >
         Clear
+      </Button>
+      <Button asChild variant="secondary" className="h-8 px-5 text-xs">
+        <Link to="/sales-orders">List</Link>
       </Button>
       <Button
         type="button"

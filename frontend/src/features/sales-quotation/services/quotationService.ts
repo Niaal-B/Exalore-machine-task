@@ -11,3 +11,15 @@ export async function createQuotation(
   )
   return response.data
 }
+
+export async function listQuotations(params: {
+  search?: string
+  status?: string
+  currency?: string
+  ordering?: string
+}): Promise<CreateQuotationResponse[]> {
+  const response = await apiClient.get<
+    CreateQuotationResponse[] | { results: CreateQuotationResponse[] }
+  >("/api/quotations/", { params })
+  return Array.isArray(response.data) ? response.data : response.data.results
+}

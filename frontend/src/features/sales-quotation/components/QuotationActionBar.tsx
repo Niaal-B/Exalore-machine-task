@@ -5,6 +5,7 @@ import {
   ChevronsRight,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Link } from "react-router-dom"
 
 type QuotationActionBarProps = {
   isEditing: boolean
@@ -80,8 +81,8 @@ export function QuotationActionBar({
       >
         Preview
       </Button>
-      <Button type="button" className="bg-[#8b5cf6] hover:bg-[#7c3aed] text-white h-8 px-6 rounded-md text-xs font-medium">
-        List
+      <Button asChild className="bg-[#8b5cf6] hover:bg-[#7c3aed] text-white h-8 px-6 rounded-md text-xs font-medium">
+        <Link to="/sales-quotations">List</Link>
       </Button>
       <Button
         type="button"

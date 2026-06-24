@@ -1,32 +1,27 @@
+import type { QuotationLine } from "@/features/sales-quotation/types/quotation-line"
+
 export interface SalesOrderForm {
   salesOrderNo: string
   salesOrderType: string
   issueDate: string
   validDate: string
+  quotationId?: number
   quotationNo: string
+  linkedQuotationLabel: string
   customerPo: string
-  customer: string
+  customerId?: number
+  customerCode: string
+  customerName: string
+  customerRefNo: string
   salesExecutive: string
   deliveryPlace: string
   currency: string
   exchangeRate: string
   notes: string
+  lines: SalesOrderLine[]
 }
 
-export interface SalesOrderLine {
-  id: number
-  itemCode: string
-  description: string
-  unit: string
-  quantity: string
-  rate: string
-  discountPercentage: string
-  discountAmount: string
-  netAmount: string
-  vatPercentage: string
-  vatAmount: string
-  netAfterVat: string
-}
+export type SalesOrderLine = QuotationLine
 
 export const DUMMY_SALES_ORDER: SalesOrderForm = {
   salesOrderNo: "SO-20260624-0001",
@@ -34,19 +29,27 @@ export const DUMMY_SALES_ORDER: SalesOrderForm = {
   issueDate: "2026-06-24",
   validDate: "2026-07-24",
   quotationNo: "SQ-20260620-A81F2C",
+  quotationId: 1,
+  linkedQuotationLabel: "SQ-20260620-A81F2C",
   customerPo: "PO-ALN-1048",
-  customer: "CUST-001 - Al Noor Trading",
+  customerId: 1,
+  customerCode: "CUST-001",
+  customerName: "Al Noor Trading",
+  customerRefNo: "PO-ALN-1048",
   salesExecutive: "Ahmed Al-Farsi",
   deliveryPlace: "Riyadh Showroom",
   currency: "SAR",
   exchangeRate: "1.00000000",
   notes: "Deliver during normal business hours.",
+  lines: [],
 }
 
 export const DUMMY_SALES_ORDER_LINES: SalesOrderLine[] = [
   {
-    id: 1,
+    localId: "dummy-1",
+    itemUnitId: 1,
     itemCode: "ITM-1001",
+    itemName: "USB Keyboard",
     description: "USB Keyboard - full-size office keyboard",
     unit: "Box",
     quantity: "2",
@@ -59,8 +62,10 @@ export const DUMMY_SALES_ORDER_LINES: SalesOrderLine[] = [
     netAfterVat: "524.4000",
   },
   {
-    id: 2,
+    localId: "dummy-2",
+    itemUnitId: 2,
     itemCode: "ITM-1002",
+    itemName: "Ballpoint Pens",
     description: "Premium blue ballpoint pens",
     unit: "Pack",
     quantity: "5",
@@ -73,8 +78,10 @@ export const DUMMY_SALES_ORDER_LINES: SalesOrderLine[] = [
     netAfterVat: "178.2500",
   },
   {
-    id: 3,
+    localId: "dummy-3",
+    itemUnitId: 3,
     itemCode: "ITM-3010",
+    itemName: "Installation Service",
     description: "On-site installation service",
     unit: "Hr",
     quantity: "3",

@@ -1,4 +1,5 @@
-import { ChevronLeft, ChevronRight, FileText, Search } from "lucide-react"
+import { ChevronLeft, ChevronRight, FileText, LoaderCircle, Search } from "lucide-react"
+import { useEffect, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -18,6 +19,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+  getQuotationDetail,
+  searchQuotations,
+} from "@/features/sales-order/services/quotationSearchService"
+import type { QuotationDetail } from "@/features/sales-order/types/quotation-detail"
+import type { QuotationSearchResult } from "@/features/sales-order/types/quotation-search"
 
 const COLUMNS = [
   "Quotation No",
@@ -26,19 +33,73 @@ const COLUMNS = [
   "Customer Ref No",
   "Customer Code",
   "Customer Name",
-  "Salesman Code",
-  "NET",
+  "Sales Executive",
+  "Net Amount",
 ]
 
-const ROWS = [
-  ["SQ-2026-0001", "Dubai", "18-06-2026", "PO-123", "CUST-001", "Al Noor Trading", "SE-001", "1250.00"],
-  ["SQ-2026-0002", "Riyadh", "20-06-2026", "PO-145", "CUST-002", "Gulf Office Supplies", "SE-002", "2875.50"],
-  ["SQ-2026-0003", "Dammam", "22-06-2026", "PO-162", "CUST-003", "Eastern Star LLC", "SE-001", "940.00"],
-]
+type QuotationLookupDialogProps = {
+  onSelect: (quotation: QuotationDetail) => void
+}
 
-export function QuotationLookupDialog() {
+export function QuotationLookupDialog({
+  onSelect,
+}: QuotationLookupDialogProps) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [query, setQuery] = useState("")
+  const [quotations, setQuotations] = useState<QuotationSearchResult[]>([])
+  const [isSearching, setIsSearching] = useState(false)
+  const [loadingId, setLoadingId] = useState<number>()
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    const search = query.trim()
+    if (!isOpen || search.length === 0) return
+
+    let isCurrent = true
+    const timeout = window.setTimeout(async () => {
+      setIsSearching(true)
+      setError("")
+      try {
+        const results = await searchQuotations(search)
+        if (isCurrent) setQuotations(results)
+      } catch {
+        if (isCurrent) {
+          setQuotations([])
+          setError("Unable to search quotations. Please try again.")
+        }
+      } finally {
+        if (isCurrent) setIsSearching(false)
+      }
+    }, 300)
+
+    return () => {
+      isCurrent = false
+      window.clearTimeout(timeout)
+    }
+  }, [isOpen, query])
+
+  function changeQuery(value: string) {
+    setQuery(value)
+    setError("")
+    if (value.trim().length === 0) setQuotations([])
+  }
+
+  async function selectQuotation(id: number) {
+    setLoadingId(id)
+    setError("")
+    try {
+      const quotation = await getQuotationDetail(id)
+      onSelect(quotation)
+      setIsOpen(false)
+    } catch {
+      setError("Unable to load the selected quotation.")
+    } finally {
+      setLoadingId(undefined)
+    }
+  }
+
   return (
-    <Dialog>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button
           type="button"
@@ -63,6 +124,11 @@ export function QuotationLookupDialog() {
         </DialogHeader>
 
         <div className="p-4">
+          {error && (
+            <div role="alert" className="mb-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+              {error}
+            </div>
+          )}
           <div className="overflow-hidden rounded-lg border border-slate-200">
             <Table className="table-fixed">
               <TableHeader>
@@ -72,37 +138,77 @@ export function QuotationLookupDialog() {
                       <span className="mb-2 block truncate">{column}</span>
                       <Input
                         type={column === "Issue Date" ? "date" : "text"}
+                        value={index === 0 ? query : ""}
+                        readOnly={index !== 0}
                         placeholder="Filter..."
                         className="h-8 bg-white px-2 text-[11px] font-normal normal-case"
+                        onChange={index === 0 ? (event) => changeQuery(event.target.value) : undefined}
                       />
                     </TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {ROWS.map((row) => (
-                  <TableRow key={row[0]} className="border-t border-slate-100 hover:bg-indigo-50/50">
-                    {row.map((value, index) => (
-                      <TableCell key={`${row[0]}-${index}`} className={`truncate px-2 py-3 text-xs text-slate-700 ${index === 7 ? "text-right font-medium" : ""}`} title={value}>
-                        {value}
-                      </TableCell>
-                    ))}
+                {isSearching && (
+                  <TableRow>
+                    <TableCell colSpan={8} className="h-24 text-center text-xs text-slate-500">
+                      <LoaderCircle className="mr-2 inline animate-spin" size={15} />
+                      Searching quotations...
+                    </TableCell>
                   </TableRow>
-                ))}
+                )}
+                {!isSearching && query.trim().length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={8} className="h-24 text-center text-xs text-slate-500">
+                      Enter a quotation number or customer name to search.
+                    </TableCell>
+                  </TableRow>
+                )}
+                {!isSearching && query.trim() && quotations.length === 0 && !error && (
+                  <TableRow>
+                    <TableCell colSpan={8} className="h-24 text-center text-xs text-slate-500">
+                      No quotations found.
+                    </TableCell>
+                  </TableRow>
+                )}
+                {!isSearching && quotations.map((quotation) => {
+                  const values = [
+                    quotation.quotationNo,
+                    quotation.deliveryPlace,
+                    quotation.issueDate,
+                    quotation.customerRefNo,
+                    quotation.customerCode,
+                    quotation.customerName,
+                    quotation.salesExecutive,
+                    quotation.netAmount,
+                  ]
+                  return (
+                    <TableRow
+                      key={quotation.id}
+                      tabIndex={0}
+                      className="cursor-pointer border-t border-slate-100 hover:bg-indigo-50"
+                      onClick={() => selectQuotation(quotation.id)}
+                    >
+                      {values.map((value, index) => (
+                        <TableCell key={`${quotation.id}-${index}`} className={`truncate px-2 py-3 text-xs text-slate-700 ${index === 7 ? "text-right font-medium" : ""}`} title={value}>
+                          {loadingId === quotation.id && index === 0 ? (
+                            <LoaderCircle className="inline animate-spin" size={14} />
+                          ) : value}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  )
+                })}
               </TableBody>
             </Table>
           </div>
 
           <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 text-xs text-slate-500">
-            <span>Showing 1–3 of 3 quotations</span>
+            <span>{quotations.length} quotation(s)</span>
             <div className="flex items-center gap-1">
-              <Button type="button" variant="outline" size="icon" className="h-8 w-8" disabled>
-                <ChevronLeft size={14} />
-              </Button>
+              <Button type="button" variant="outline" size="icon" className="h-8 w-8" disabled><ChevronLeft size={14} /></Button>
               <Button type="button" className="h-8 w-8 bg-indigo-600 p-0 text-xs text-white">1</Button>
-              <Button type="button" variant="outline" size="icon" className="h-8 w-8" disabled>
-                <ChevronRight size={14} />
-              </Button>
+              <Button type="button" variant="outline" size="icon" className="h-8 w-8" disabled><ChevronRight size={14} /></Button>
             </div>
           </div>
         </div>

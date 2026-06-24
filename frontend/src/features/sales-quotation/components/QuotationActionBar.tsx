@@ -9,16 +9,24 @@ import { Button } from "@/components/ui/button"
 type QuotationActionBarProps = {
   isEditing: boolean
   isSaving: boolean
+  canPreview: boolean
+  canPrint: boolean
   onNew: () => void
   onSave: () => void
+  onPreview: () => void
+  onPrint: () => void
   onCancel: () => void
 }
 
 export function QuotationActionBar({
   isEditing,
   isSaving,
+  canPreview,
+  canPrint,
   onNew,
   onSave,
+  onPreview,
+  onPrint,
   onCancel,
 }: QuotationActionBarProps) {
   return (
@@ -54,10 +62,22 @@ export function QuotationActionBar({
       >
         {isSaving ? "Saving..." : "Save"}
       </Button>
-      <Button type="button" variant="secondary" className="bg-slate-200 hover:bg-slate-300 text-slate-400 h-8 px-5 rounded-md text-xs font-medium cursor-not-allowed">
+      <Button
+        type="button"
+        variant="secondary"
+        disabled={!canPrint}
+        className="h-8 rounded-md bg-slate-200 px-5 text-xs font-medium text-slate-700 hover:bg-slate-300 disabled:cursor-not-allowed disabled:text-slate-400"
+        onClick={onPrint}
+      >
         Print
       </Button>
-      <Button type="button" variant="secondary" className="bg-slate-200 hover:bg-slate-300 text-slate-400 h-8 px-5 rounded-md text-xs font-medium cursor-not-allowed">
+      <Button
+        type="button"
+        variant="secondary"
+        disabled={!canPreview}
+        className="h-8 rounded-md bg-slate-200 px-5 text-xs font-medium text-slate-700 hover:bg-slate-300 disabled:cursor-not-allowed disabled:text-slate-400"
+        onClick={onPreview}
+      >
         Preview
       </Button>
       <Button type="button" className="bg-[#8b5cf6] hover:bg-[#7c3aed] text-white h-8 px-6 rounded-md text-xs font-medium">

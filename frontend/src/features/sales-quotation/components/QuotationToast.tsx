@@ -4,12 +4,14 @@ import { useEffect } from "react"
 type QuotationToastProps = {
   message: string
   type: "success" | "error"
+  title?: string
   onClose: () => void
 }
 
 export function QuotationToast({
   message,
   type,
+  title,
   onClose,
 }: QuotationToastProps) {
   useEffect(() => {
@@ -33,7 +35,7 @@ export function QuotationToast({
       />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-slate-900">
-          {isSuccess ? "Quotation created" : "Unable to save quotation"}
+          {title ?? (isSuccess ? "Quotation created" : "Unable to save quotation")}
         </p>
         <p className="mt-1 text-sm leading-5 text-slate-600">{message}</p>
       </div>

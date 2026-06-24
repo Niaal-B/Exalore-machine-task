@@ -1,20 +1,12 @@
 import {
-  Boxes,
-  ChevronDown,
   ClipboardList,
   FileBox,
-  FileText,
-  Gauge,
   LogOut,
   Menu,
   Package,
   PanelLeftClose,
   ReceiptText,
-  Search,
-  Settings2,
-  ShoppingBag,
   UserRound,
-  Warehouse,
   X,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
@@ -27,23 +19,13 @@ type NavItem = {
   label: string
   icon: LucideIcon
   href: string
-  expanded?: boolean
 }
 
 const navSections: { label: string; items: NavItem[] }[] = [
   {
-    label: "Workspace",
-    items: [
-      { label: "Dashboard", icon: Gauge, href: "/" },
-      { label: "Inventory", icon: Warehouse, href: "#", expanded: true },
-    ],
-  },
-  {
     label: "Inventory",
     items: [
       { label: "Item File", icon: FileBox, href: "/items/new" },
-      { label: "Item Groups", icon: Boxes, href: "#" },
-      { label: "Stock Overview", icon: Package, href: "#" },
     ],
   },
   {
@@ -51,14 +33,6 @@ const navSections: { label: string; items: NavItem[] }[] = [
     items: [
       { label: "Sales Quotations", icon: ClipboardList, href: "/sales-quotations/new" },
       { label: "Sales Orders", icon: ReceiptText, href: "/sales-orders/new" },
-      { label: "Sales Invoices", icon: FileText, href: "#" },
-    ],
-  },
-  {
-    label: "Purchase",
-    items: [
-      { label: "Purchase Orders", icon: ShoppingBag, href: "#" },
-      { label: "Configuration", icon: Settings2, href: "#" },
     ],
   },
 ]
@@ -108,17 +82,7 @@ export function ErpLayout() {
           </button>
         </div>
 
-        <div className="px-4 pt-4">
-          <label className="relative block">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
-            <input
-              className="h-9 w-full rounded-lg border border-white/8 bg-white/[0.04] pl-9 pr-3 text-xs text-slate-200 outline-none placeholder:text-slate-600 focus:border-indigo-400/50"
-              placeholder="Search menu..."
-            />
-          </label>
-        </div>
-
-        <nav className="mt-4 flex-1 space-y-5 overflow-y-auto px-3 pb-5">
+        <nav className="mt-5 flex-1 space-y-5 overflow-y-auto px-3 pb-5">
           {navSections.map((section) => (
             <div key={section.label}>
               <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
@@ -143,7 +107,6 @@ export function ErpLayout() {
                     >
                       <Icon size={16} />
                       <span className="flex-1">{item.label}</span>
-                      {item.expanded && <ChevronDown size={14} className="text-slate-600" />}
                     </NavLink>
                   )
                 })}

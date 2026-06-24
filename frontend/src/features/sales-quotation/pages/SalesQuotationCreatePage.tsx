@@ -1,6 +1,12 @@
 import axios from "axios"
 import { useMemo, useState } from "react"
 
+import { SalesDocumentPrintDialog } from "@/features/sales-documents/components/SalesDocumentPrintDialog"
+import {
+  quotationPreviewDocument,
+  savedQuotationDocument,
+} from "@/features/sales-documents/mappers/printableDocumentMappers"
+import type { PrintableSalesDocument } from "@/features/sales-documents/types/printable-sales-document"
 import { QuotationActionBar } from "@/features/sales-quotation/components/QuotationActionBar"
 import { QuotationHeaderSection } from "@/features/sales-quotation/components/QuotationHeaderSection"
 import {
@@ -64,6 +70,11 @@ export function SalesQuotationCreatePage() {
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState("")
   const [successMessage, setSuccessMessage] = useState("")
+  const [savedPrintDocument, setSavedPrintDocument] =
+    useState<PrintableSalesDocument | null>(null)
+  const [activePrintDocument, setActivePrintDocument] =
+    useState<PrintableSalesDocument | null>(null)
+  const [isPrintOpen, setIsPrintOpen] = useState(false)
   const totals = useMemo(() => calculateQuotationTotals(lines), [lines])
 
   const selectedCustomer = useMemo<Customer | undefined>(() => {
@@ -127,6 +138,7 @@ export function SalesQuotationCreatePage() {
   function startNewQuotation() {
     resetQuotation()
     setSuccessMessage("")
+    setSavedPrintDocument(null)
     setIsEditing(true)
   }
 
@@ -147,6 +159,7 @@ export function SalesQuotationCreatePage() {
       const payload = mapQuotationPayload(form, lines)
       const quotation = await createQuotation(payload)
 
+      setSavedPrintDocument(savedQuotationDocument(quotation))
       resetQuotation()
       setIsEditing(false)
       setSuccessMessage(
@@ -173,6 +186,17 @@ export function SalesQuotationCreatePage() {
     }
   }
 
+  function previewQuotation() {
+    setActivePrintDocument(quotationPreviewDocument(form, lines, totals))
+    setIsPrintOpen(true)
+  }
+
+  function printSavedQuotation() {
+    if (!savedPrintDocument) return
+    setActivePrintDocument(savedPrintDocument)
+    setIsPrintOpen(true)
+  }
+
   return (
     <div className="flex h-[calc(100vh-68px)] flex-col bg-[#f4f6fa] overflow-hidden">
       {saveError && (
@@ -189,6 +213,11 @@ export function SalesQuotationCreatePage() {
           onClose={() => setSuccessMessage("")}
         />
       )}
+      <SalesDocumentPrintDialog
+        document={activePrintDocument}
+        open={isPrintOpen}
+        onOpenChange={setIsPrintOpen}
+      />
       <div className="flex-1 overflow-y-auto px-4 py-3">
         {/* Page header */}
         <div className="mb-3 rounded-t-xl bg-white py-3 shadow-sm text-center border-b-2 border-indigo-50">
@@ -234,8 +263,12 @@ export function SalesQuotationCreatePage() {
       <QuotationActionBar
         isEditing={isEditing}
         isSaving={isSaving}
+        canPreview={isEditing && lines.some((line) => line.itemUnitId !== undefined)}
+        canPrint={savedPrintDocument !== null}
         onNew={startNewQuotation}
         onSave={saveQuotation}
+        onPreview={previewQuotation}
+        onPrint={printSavedQuotation}
         onCancel={cancelQuotation}
       />
     </div>

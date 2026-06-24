@@ -5,6 +5,7 @@ import type {
   CreateItemRequest,
   ItemResponse,
 } from "@/features/items/types/item"
+import type { ItemListRecord } from "@/features/items/types/item-list"
 
 export type ItemApiError = {
   message: string
@@ -99,6 +100,19 @@ export async function createItem(
 
   const response = await apiClient.post<ItemResponse>("/api/items/", payload)
   return response.data
+}
+
+export async function listItems(params: {
+  search?: string
+  status?: string
+  tax_status?: string
+  ordering?: string
+}): Promise<ItemListRecord[]> {
+  const response = await apiClient.get<ItemListRecord[] | { results: ItemListRecord[] }>(
+    "/api/items/",
+    { params },
+  )
+  return Array.isArray(response.data) ? response.data : response.data.results
 }
 
 export function parseItemApiError(error: unknown): ItemApiError {

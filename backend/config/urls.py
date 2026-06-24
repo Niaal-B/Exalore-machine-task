@@ -21,9 +21,14 @@ from drf_spectacular.views import (
     SpectacularRedocView,
     SpectacularSwaggerView,
 )
+from rest_framework_simplejwt.views import TokenRefreshView
+
+from .auth import AdminTokenObtainPairView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/auth/token/', AdminTokenObtainPairView.as_view(), name='token-obtain-pair'),
+    path('api/auth/token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
     path('api/schema/', SpectacularAPIView.as_view(), name='api-schema'),
     path(
         'api/schema/swagger-ui/',
@@ -36,4 +41,5 @@ urlpatterns = [
         name='redoc',
     ),
     path('api/', include('items.urls')),
+    path('api/', include('sales.urls')),
 ]

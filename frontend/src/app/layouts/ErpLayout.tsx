@@ -1,77 +1,71 @@
 import {
-  Boxes,
-  ChevronDown,
   ClipboardList,
   FileBox,
-  FileText,
-  Gauge,
   LogOut,
   Menu,
   Package,
   PanelLeftClose,
   ReceiptText,
-  Search,
-  Settings2,
-  ShoppingBag,
   UserRound,
-  Warehouse,
   X,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { useState } from "react"
-import { NavLink, Outlet } from "react-router-dom"
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom"
 
+import { clearTokens } from "@/features/auth/services/authStorage"
 import { cn } from "@/lib/utils"
 
 type NavItem = {
   label: string
   icon: LucideIcon
   href: string
-  active?: boolean
-  expanded?: boolean
 }
 
 const navSections: { label: string; items: NavItem[] }[] = [
   {
-    label: "Workspace",
-    items: [
-      { label: "Dashboard", icon: Gauge, href: "/" },
-      { label: "Inventory", icon: Warehouse, href: "/items/new", expanded: true },
-    ],
-  },
-  {
     label: "Inventory",
     items: [
-      { label: "Item File", icon: FileBox, href: "/items/new", active: true },
-      { label: "Item Groups", icon: Boxes, href: "#" },
-      { label: "Stock Overview", icon: Package, href: "#" },
+      { label: "Item File", icon: FileBox, href: "/items/new" },
     ],
   },
   {
     label: "Sales",
     items: [
-      { label: "Sales Quotations", icon: ClipboardList, href: "#" },
-      { label: "Sales Orders", icon: ReceiptText, href: "#" },
-      { label: "Sales Invoices", icon: FileText, href: "#" },
-    ],
-  },
-  {
-    label: "Purchase",
-    items: [
-      { label: "Purchase Orders", icon: ShoppingBag, href: "#" },
-      { label: "Configuration", icon: Settings2, href: "#" },
+      { label: "Sales Quotations", icon: ClipboardList, href: "/sales-quotations/new" },
+      { label: "Sales Orders", icon: ReceiptText, href: "/sales-orders/new" },
     ],
   },
 ]
 
+const routeLabels = [
+  { path: "/items", section: "Inventory", page: "Item File" },
+  {
+    path: "/sales-quotations",
+    section: "Sales",
+    page: "Sales Quotations",
+  },
+  { path: "/sales-orders", section: "Sales", page: "Sales Orders" },
+]
+
 export function ErpLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const navigate = useNavigate()
+  const { pathname } = useLocation()
+  const currentRoute = routeLabels.find((route) =>
+    pathname.startsWith(route.path),
+  )
+
+  function logout() {
+    clearTokens()
+    navigate("/login", { replace: true })
+  }
 
   return (
     <div className="min-h-screen bg-[#f4f6fa]">
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-[#111a31] text-slate-300 shadow-2xl transition-transform duration-300 lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 flex w-52 flex-col bg-[#111a31] text-slate-300 shadow-2xl transition-transform duration-300 lg:translate-x-0",
           sidebarOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
@@ -95,17 +89,7 @@ export function ErpLayout() {
           </button>
         </div>
 
-        <div className="px-4 pt-4">
-          <label className="relative block">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
-            <input
-              className="h-9 w-full rounded-lg border border-white/8 bg-white/[0.04] pl-9 pr-3 text-xs text-slate-200 outline-none placeholder:text-slate-600 focus:border-indigo-400/50"
-              placeholder="Search menu..."
-            />
-          </label>
-        </div>
-
-        <nav className="mt-4 flex-1 space-y-5 overflow-y-auto px-3 pb-5">
+        <nav className="mt-5 flex-1 space-y-5 overflow-y-auto px-3 pb-5">
           {navSections.map((section) => (
             <div key={section.label}>
               <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
@@ -119,10 +103,10 @@ export function ErpLayout() {
                       key={item.label}
                       to={item.href}
                       onClick={() => setSidebarOpen(false)}
-                      className={() =>
+                      className={({ isActive }) =>
                         cn(
                           "flex h-10 items-center gap-3 rounded-lg px-3 text-[13px] font-medium transition-colors",
-                          item.active
+                          isActive && item.href !== "#"
                             ? "bg-indigo-500/16 text-indigo-200 ring-1 ring-inset ring-indigo-400/10"
                             : "text-slate-400 hover:bg-white/[0.05] hover:text-slate-100",
                         )
@@ -130,7 +114,6 @@ export function ErpLayout() {
                     >
                       <Icon size={16} />
                       <span className="flex-1">{item.label}</span>
-                      {item.expanded && <ChevronDown size={14} className="text-slate-600" />}
                     </NavLink>
                   )
                 })}
@@ -151,7 +134,7 @@ export function ErpLayout() {
               </div>
             </div>
           </div>
-          <button className="flex h-9 w-full items-center gap-3 rounded-lg px-3 text-xs font-medium text-rose-300 hover:bg-rose-500/10">
+          <button type="button" className="flex h-9 w-full items-center gap-3 rounded-lg px-3 text-xs font-medium text-rose-300 hover:bg-rose-500/10" onClick={logout}>
             <LogOut size={15} />
             Logout
           </button>
@@ -166,7 +149,7 @@ export function ErpLayout() {
         />
       )}
 
-      <div className="lg:pl-64">
+      <div className="min-w-0 lg:pl-52">
         <header className="sticky top-0 z-30 flex h-17 items-center gap-4 border-b border-slate-200/80 bg-white/90 px-4 backdrop-blur-xl sm:px-6">
           <button
             type="button"
@@ -179,9 +162,13 @@ export function ErpLayout() {
           <PanelLeftClose className="hidden text-slate-400 lg:block" size={18} />
           <div className="h-5 w-px bg-slate-200" />
           <div className="flex min-w-0 items-center gap-2 text-xs">
-            <span className="text-slate-400">Inventory</span>
+            <span className="text-slate-400">
+              {currentRoute?.section ?? "Workspace"}
+            </span>
             <span className="text-slate-300">/</span>
-            <span className="truncate font-semibold text-slate-700">Item File</span>
+            <span className="truncate font-semibold text-slate-700">
+              {currentRoute?.page ?? "Dashboard"}
+            </span>
           </div>
           <div className="ml-auto flex items-center gap-3">
             <div className="hidden rounded-full bg-emerald-50 px-3 py-1.5 text-[11px] font-semibold text-emerald-700 sm:block">
@@ -191,7 +178,7 @@ export function ErpLayout() {
           </div>
         </header>
 
-        <main className="p-4 sm:p-6 lg:p-7">
+        <main className="min-w-0 p-3 sm:p-4 lg:p-4">
           <Outlet />
         </main>
       </div>

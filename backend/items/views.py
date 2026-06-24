@@ -4,11 +4,14 @@ from drf_spectacular.utils import (
     extend_schema,
     extend_schema_view,
 )
+from django.db.models import Prefetch, Q
 from rest_framework import filters, viewsets
+from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
+from rest_framework.response import Response
 
-from .models import Item
-from .serializers import ItemSerializer
+from .models import Item, ItemPrice, ItemUnit
+from .serializers import ItemSearchSerializer, ItemSerializer
 
 
 VALIDATION_ERROR_RESPONSE = OpenApiResponse(
@@ -164,6 +167,39 @@ class ItemViewSet(viewsets.ModelViewSet):
     ordering = ("code",)
 
     http_method_names = ("get", "post", "put", "patch", "head", "options")
+
+    @action(detail=False, methods=("get",), url_path="search")
+    def search(self, request):
+        search_term = request.query_params.get("search", "").strip()
+        queryset = (
+            ItemUnit.objects.filter(
+                item__status=Item.Status.ACTIVE,
+                prices__price_list_type__iexact="Retail",
+            )
+            .select_related("item")
+            .prefetch_related(
+                Prefetch(
+                    "prices",
+                    queryset=ItemPrice.objects.filter(
+                        price_list_type__iexact="Retail"
+                    ),
+                    to_attr="retail_prices",
+                )
+            )
+            .order_by("item__code", "unit")
+            .distinct()
+        )
+
+        if search_term:
+            queryset = queryset.filter(
+                Q(item__code__icontains=search_term)
+                | Q(item__name__icontains=search_term)
+                | Q(item__secondary_name__icontains=search_term)
+                | Q(item__generic_name__icontains=search_term)
+            )
+
+        serializer = ItemSearchSerializer(queryset[:20], many=True)
+        return Response(serializer.data)
 
     def get_queryset(self):
         queryset = super().get_queryset()

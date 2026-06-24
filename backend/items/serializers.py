@@ -4,6 +4,43 @@ from rest_framework import serializers
 from .models import Item, ItemPrice, ItemUnit
 
 
+class ItemSearchSerializer(serializers.ModelSerializer):
+    item_code = serializers.CharField(source="item.code", read_only=True)
+    item_name = serializers.CharField(source="item.name", read_only=True)
+    description = serializers.CharField(source="item.description", read_only=True)
+    sale_price = serializers.SerializerMethodField()
+    minimum_selling_price = serializers.SerializerMethodField()
+    vat_percentage = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ItemUnit
+        fields = (
+            "item_unit_id",
+            "item_code",
+            "item_name",
+            "description",
+            "unit",
+            "sale_price",
+            "minimum_selling_price",
+            "vat_percentage",
+        )
+
+    item_unit_id = serializers.IntegerField(source="id", read_only=True)
+
+    @staticmethod
+    def _retail_price(item_unit):
+        return item_unit.retail_prices[0]
+
+    def get_sale_price(self, item_unit):
+        return str(self._retail_price(item_unit).sale_price)
+
+    def get_minimum_selling_price(self, item_unit):
+        return str(self._retail_price(item_unit).minimum_selling_price)
+
+    def get_vat_percentage(self, item_unit):
+        return "15.0000" if item_unit.item.tax_status == Item.TaxStatus.TAXABLE else "0.0000"
+
+
 class ItemPriceSerializer(serializers.ModelSerializer):
     # Writable IDs let parent serializers reconcile existing nested rows.
     id = serializers.IntegerField(required=False)

@@ -11,6 +11,7 @@ import {
   Plus,
   Save,
 } from "lucide-react"
+import { Link } from "react-router-dom"
 import {
   type ChangeEvent,
   type FormEvent,
@@ -413,8 +414,8 @@ export function ItemCreatePage() {
           >
             <Plus size={15} /> New
           </Button>
-          <Button type="button" variant="secondary" disabled={isSubmitting}>
-            <List size={15} /> View items
+          <Button asChild variant="secondary">
+            <Link to="/items"><List size={15} /> View items</Link>
           </Button>
           <Button type="submit" disabled={!isEditing || isSubmitting}>
             {isSubmitting ? (

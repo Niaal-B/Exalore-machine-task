@@ -11,8 +11,9 @@ import {
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { useState } from "react"
-import { NavLink, Outlet, useLocation } from "react-router-dom"
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom"
 
+import { clearTokens } from "@/features/auth/services/authStorage"
 import { cn } from "@/lib/utils"
 
 type NavItem = {
@@ -49,10 +50,16 @@ const routeLabels = [
 
 export function ErpLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const navigate = useNavigate()
   const { pathname } = useLocation()
   const currentRoute = routeLabels.find((route) =>
     pathname.startsWith(route.path),
   )
+
+  function logout() {
+    clearTokens()
+    navigate("/login", { replace: true })
+  }
 
   return (
     <div className="min-h-screen bg-[#f4f6fa]">
@@ -127,7 +134,7 @@ export function ErpLayout() {
               </div>
             </div>
           </div>
-          <button className="flex h-9 w-full items-center gap-3 rounded-lg px-3 text-xs font-medium text-rose-300 hover:bg-rose-500/10">
+          <button type="button" className="flex h-9 w-full items-center gap-3 rounded-lg px-3 text-xs font-medium text-rose-300 hover:bg-rose-500/10" onClick={logout}>
             <LogOut size={15} />
             Logout
           </button>

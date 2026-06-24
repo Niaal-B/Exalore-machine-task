@@ -28,7 +28,6 @@ class CustomerViewSet(viewsets.ReadOnlyModelViewSet):
 
 class SalesQuotationViewSet(viewsets.ModelViewSet):
     serializer_class = SalesQuotationSerializer
-    permission_classes = []
     filter_backends = (filters.SearchFilter, filters.OrderingFilter)
     search_fields = ("quotation_no", "customer_code", "customer_name")
     ordering_fields = ("quotation_date", "quotation_no", "created_at")
@@ -85,7 +84,6 @@ class SalesQuotationViewSet(viewsets.ModelViewSet):
 
 class SalesOrderViewSet(viewsets.ModelViewSet):
     serializer_class = SalesOrderSerializer
-    permission_classes = []
     filter_backends = (filters.SearchFilter, filters.OrderingFilter)
     search_fields = ("sales_order_no", "customer_code", "customer_name")
     ordering_fields = ("issue_date", "sales_order_no", "created_at")

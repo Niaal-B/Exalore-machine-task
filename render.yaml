@@ -1,0 +1,29 @@
+databases:
+  - name: exalore-erp-db
+    plan: free
+    databaseName: exalore_erp
+    user: exalore
+
+services:
+  - type: web
+    name: exalore-erp-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /admin/login/
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: exalore-erp-db
+          property: connectionString
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_DEBUG
+        value: "false"
+      - key: WEB_CONCURRENCY
+        value: "2"
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: CSRF_TRUSTED_ORIGINS
+        sync: false

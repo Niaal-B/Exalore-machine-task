@@ -83,6 +83,23 @@ def prepare_line_data(payload: dict) -> tuple[dict, Decimal]:
         "discount_percentage",
         Decimal("0"),
     )
+    effective_unit_price = _money(
+        rate
+        * (Decimal("100") - discount_percentage)
+        / Decimal("100")
+    )
+    if effective_unit_price < price.minimum_selling_price:
+        raise serializers.ValidationError(
+            {
+                "lines": (
+                    f"Discount reduces {item_unit.item.code} "
+                    f"({item_unit.unit}) to {effective_unit_price}. "
+                    "The minimum selling price is "
+                    f"{price.minimum_selling_price}."
+                )
+            }
+        )
+
     vat_percentage = (
         DEFAULT_VAT_PERCENTAGE
         if item_unit.item.tax_status == Item.TaxStatus.TAXABLE
@@ -360,4 +377,3 @@ class CustomerSerializer(serializers.ModelSerializer):
         model = Customer
         fields = ("id", "code", "name")
         read_only_fields = fields
-

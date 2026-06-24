@@ -19,7 +19,7 @@ import {
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { useState } from "react"
-import { NavLink, Outlet } from "react-router-dom"
+import { NavLink, Outlet, useLocation } from "react-router-dom"
 
 import { cn } from "@/lib/utils"
 
@@ -27,7 +27,6 @@ type NavItem = {
   label: string
   icon: LucideIcon
   href: string
-  active?: boolean
   expanded?: boolean
 }
 
@@ -36,13 +35,13 @@ const navSections: { label: string; items: NavItem[] }[] = [
     label: "Workspace",
     items: [
       { label: "Dashboard", icon: Gauge, href: "/" },
-      { label: "Inventory", icon: Warehouse, href: "/items/new", expanded: true },
+      { label: "Inventory", icon: Warehouse, href: "#", expanded: true },
     ],
   },
   {
     label: "Inventory",
     items: [
-      { label: "Item File", icon: FileBox, href: "/items/new", active: true },
+      { label: "Item File", icon: FileBox, href: "/items/new" },
       { label: "Item Groups", icon: Boxes, href: "#" },
       { label: "Stock Overview", icon: Package, href: "#" },
     ],
@@ -64,14 +63,27 @@ const navSections: { label: string; items: NavItem[] }[] = [
   },
 ]
 
+const routeLabels = [
+  { path: "/items", section: "Inventory", page: "Item File" },
+  {
+    path: "/sales-quotations",
+    section: "Sales",
+    page: "Sales Quotations",
+  },
+]
+
 export function ErpLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const { pathname } = useLocation()
+  const currentRoute = routeLabels.find((route) =>
+    pathname.startsWith(route.path),
+  )
 
   return (
     <div className="min-h-screen bg-[#f4f6fa]">
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-[#111a31] text-slate-300 shadow-2xl transition-transform duration-300 lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 flex w-52 flex-col bg-[#111a31] text-slate-300 shadow-2xl transition-transform duration-300 lg:translate-x-0",
           sidebarOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
@@ -119,10 +131,10 @@ export function ErpLayout() {
                       key={item.label}
                       to={item.href}
                       onClick={() => setSidebarOpen(false)}
-                      className={() =>
+                      className={({ isActive }) =>
                         cn(
                           "flex h-10 items-center gap-3 rounded-lg px-3 text-[13px] font-medium transition-colors",
-                          item.active
+                          isActive && item.href !== "#"
                             ? "bg-indigo-500/16 text-indigo-200 ring-1 ring-inset ring-indigo-400/10"
                             : "text-slate-400 hover:bg-white/[0.05] hover:text-slate-100",
                         )
@@ -166,7 +178,7 @@ export function ErpLayout() {
         />
       )}
 
-      <div className="lg:pl-64">
+      <div className="min-w-0 lg:pl-52">
         <header className="sticky top-0 z-30 flex h-17 items-center gap-4 border-b border-slate-200/80 bg-white/90 px-4 backdrop-blur-xl sm:px-6">
           <button
             type="button"
@@ -179,9 +191,13 @@ export function ErpLayout() {
           <PanelLeftClose className="hidden text-slate-400 lg:block" size={18} />
           <div className="h-5 w-px bg-slate-200" />
           <div className="flex min-w-0 items-center gap-2 text-xs">
-            <span className="text-slate-400">Inventory</span>
+            <span className="text-slate-400">
+              {currentRoute?.section ?? "Workspace"}
+            </span>
             <span className="text-slate-300">/</span>
-            <span className="truncate font-semibold text-slate-700">Item File</span>
+            <span className="truncate font-semibold text-slate-700">
+              {currentRoute?.page ?? "Dashboard"}
+            </span>
           </div>
           <div className="ml-auto flex items-center gap-3">
             <div className="hidden rounded-full bg-emerald-50 px-3 py-1.5 text-[11px] font-semibold text-emerald-700 sm:block">
@@ -191,7 +207,7 @@ export function ErpLayout() {
           </div>
         </header>
 
-        <main className="p-4 sm:p-6 lg:p-7">
+        <main className="min-w-0 p-3 sm:p-4 lg:p-4">
           <Outlet />
         </main>
       </div>

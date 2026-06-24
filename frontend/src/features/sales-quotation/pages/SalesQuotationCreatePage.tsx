@@ -1,12 +1,21 @@
+import axios from "axios"
 import { useMemo, useState } from "react"
 
 import { QuotationActionBar } from "@/features/sales-quotation/components/QuotationActionBar"
 import { QuotationHeaderSection } from "@/features/sales-quotation/components/QuotationHeaderSection"
-import { QuotationItemsSection } from "@/features/sales-quotation/components/QuotationItemsSection"
+import {
+  createQuotationLine,
+  QuotationItemsSection,
+} from "@/features/sales-quotation/components/QuotationItemsSection"
 import { QuotationTotalsSection } from "@/features/sales-quotation/components/QuotationTotalsSection"
+import { QuotationToast } from "@/features/sales-quotation/components/QuotationToast"
+import { mapQuotationPayload } from "@/features/sales-quotation/mappers/quotationPayloadMapper"
+import { createQuotation } from "@/features/sales-quotation/services/quotationService"
 
 import type { Customer } from "@/features/sales-quotation/types/customer"
+import type { QuotationLine } from "@/features/sales-quotation/types/quotation-line"
 import type { QuotationForm } from "@/features/sales-quotation/types/quotation"
+import { calculateQuotationTotals } from "@/features/sales-quotation/utils/quotationTotals"
 
 function getTodayForDateInput() {
   const now = new Date()
@@ -30,8 +39,32 @@ function createInitialForm(): QuotationForm {
   }
 }
 
+function validationMessages(value: unknown, field = ""): string[] {
+  if (typeof value === "string") {
+    const visibleField = field === "lines" ? "" : field
+    return [visibleField ? `${visibleField}: ${value}` : value]
+  }
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => validationMessages(item, field))
+  }
+  if (value !== null && typeof value === "object") {
+    return Object.entries(value).flatMap(([key, item]) =>
+      validationMessages(item, field ? `${field}.${key}` : key),
+    )
+  }
+  return []
+}
+
 export function SalesQuotationCreatePage() {
+  const [isEditing, setIsEditing] = useState(false)
   const [form, setForm] = useState<QuotationForm>(createInitialForm)
+  const [lines, setLines] = useState<QuotationLine[]>(() => [
+    createQuotationLine(),
+  ])
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState("")
+  const [successMessage, setSuccessMessage] = useState("")
+  const totals = useMemo(() => calculateQuotationTotals(lines), [lines])
 
   const selectedCustomer = useMemo<Customer | undefined>(() => {
     if (form.customerId === undefined) return undefined
@@ -85,8 +118,77 @@ export function SalesQuotationCreatePage() {
     })
   }
 
+  function resetQuotation() {
+    setForm(createInitialForm())
+    setLines([createQuotationLine()])
+    setSaveError("")
+  }
+
+  function startNewQuotation() {
+    resetQuotation()
+    setSuccessMessage("")
+    setIsEditing(true)
+  }
+
+  function cancelQuotation() {
+    resetQuotation()
+    setSuccessMessage("")
+    setIsEditing(false)
+  }
+
+  async function saveQuotation() {
+    if (!isEditing || isSaving) return
+
+    setSaveError("")
+    setSuccessMessage("")
+    setIsSaving(true)
+
+    try {
+      const payload = mapQuotationPayload(form, lines)
+      const quotation = await createQuotation(payload)
+
+      resetQuotation()
+      setIsEditing(false)
+      setSuccessMessage(
+        `Quotation ${quotation.quotation_no} was created successfully.`,
+      )
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        if (!error.response) {
+          setSaveError("Unable to reach the server. Check your connection and try again.")
+        } else {
+          const messages = validationMessages(error.response.data)
+          setSaveError(
+            messages.join(" · ") ||
+              "The server could not create the quotation. Please try again.",
+          )
+        }
+      } else if (error instanceof Error) {
+        setSaveError(error.message)
+      } else {
+        setSaveError("An unexpected error occurred while saving the quotation.")
+      }
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   return (
     <div className="flex h-[calc(100vh-68px)] flex-col bg-[#f4f6fa] overflow-hidden">
+      {saveError && (
+        <QuotationToast
+          type="error"
+          message={saveError}
+          onClose={() => setSaveError("")}
+        />
+      )}
+      {successMessage && (
+        <QuotationToast
+          type="success"
+          message={successMessage}
+          onClose={() => setSuccessMessage("")}
+        />
+      )}
       <div className="flex-1 overflow-y-auto px-4 py-3">
         {/* Page header */}
         <div className="mb-3 rounded-t-xl bg-white py-3 shadow-sm text-center border-b-2 border-indigo-50">
@@ -96,30 +198,46 @@ export function SalesQuotationCreatePage() {
         </div>
 
         <div className="flex flex-col gap-3 bg-white p-3 rounded-b-xl shadow-sm">
-          {/* Sections */}
-          <QuotationHeaderSection
-            values={form}
-            selectedCustomer={selectedCustomer}
-            onChange={updateForm}
-            onCustomerSelect={selectCustomer}
-            onCustomerClear={clearCustomer}
-          />
-          
           {/* Notice Bar */}
-          <div className="rounded-md bg-[#fff4cc] px-4 py-2 text-sm font-medium text-[#856404] border border-[#ffeeba]">
-            Click 'New/Edit' to enable the form
+          <div className={`rounded-md px-4 py-2 text-sm font-medium border ${
+            isEditing
+              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+              : "border-[#ffeeba] bg-[#fff4cc] text-[#856404]"
+          }`}>
+            {isEditing
+              ? "New quotation mode — complete the form and click Save."
+              : "Click New to enable the quotation form."}
           </div>
 
-          <QuotationItemsSection />
-          
-          <div className="mt-auto">
-            <QuotationTotalsSection />
-          </div>
+          <fieldset
+            disabled={!isEditing || isSaving}
+            className="flex flex-col gap-3 disabled:opacity-60"
+          >
+            <QuotationHeaderSection
+              values={form}
+              selectedCustomer={selectedCustomer}
+              onChange={updateForm}
+              onCustomerSelect={selectCustomer}
+              onCustomerClear={clearCustomer}
+            />
+
+            <QuotationItemsSection lines={lines} setLines={setLines} />
+
+            <div className="mt-auto">
+              <QuotationTotalsSection totals={totals} />
+            </div>
+          </fieldset>
         </div>
       </div>
 
       {/* Sticky footer action bar */}
-      <QuotationActionBar />
+      <QuotationActionBar
+        isEditing={isEditing}
+        isSaving={isSaving}
+        onNew={startNewQuotation}
+        onSave={saveQuotation}
+        onCancel={cancelQuotation}
+      />
     </div>
   )
 }

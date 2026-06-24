@@ -24,9 +24,11 @@ export function CustomerSearchField({
   const [error, setError] = useState("")
 
   useEffect(() => {
-    if (selectedCustomer) {
-      setQuery(`${selectedCustomer.code} - ${selectedCustomer.name}`)
-    }
+    setQuery(
+      selectedCustomer
+        ? `${selectedCustomer.code} - ${selectedCustomer.name}`
+        : "",
+    )
   }, [selectedCustomer?.id, selectedCustomer?.code, selectedCustomer?.name])
 
   useEffect(() => {

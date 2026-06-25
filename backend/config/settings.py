@@ -48,8 +48,6 @@ if render_hostname:
 INSTALLED_APPS = [
     'items.apps.ItemsConfig',
     'sales.apps.SalesConfig',
-    'cloudinary_storage',
-    'cloudinary',
     'rest_framework',
     'drf_spectacular',
     'corsheaders',
@@ -59,6 +57,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'cloudinary_storage',
+    'cloudinary',
 ]
 
 MIDDLEWARE = [
@@ -141,6 +141,7 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 USE_CLOUDINARY = (
     bool(os.getenv("CLOUDINARY_URL"))
@@ -166,6 +167,11 @@ STORAGES = {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
 }
+DEFAULT_FILE_STORAGE = (
+    "cloudinary_storage.storage.MediaCloudinaryStorage"
+    if USE_CLOUDINARY
+    else "django.core.files.storage.FileSystemStorage"
+)
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"

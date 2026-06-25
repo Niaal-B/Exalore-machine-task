@@ -1,5 +1,6 @@
 import axios from "axios"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { useSearchParams } from "react-router-dom"
 
 import { SalesDocumentPrintDialog } from "@/features/sales-documents/components/SalesDocumentPrintDialog"
 import {
@@ -16,12 +17,18 @@ import {
 import { QuotationTotalsSection } from "@/features/sales-quotation/components/QuotationTotalsSection"
 import { QuotationToast } from "@/features/sales-quotation/components/QuotationToast"
 import { mapQuotationPayload } from "@/features/sales-quotation/mappers/quotationPayloadMapper"
-import { createQuotation } from "@/features/sales-quotation/services/quotationService"
+import {
+  createQuotation,
+  getQuotation,
+  updateQuotation,
+} from "@/features/sales-quotation/services/quotationService"
 
 import type { Customer } from "@/features/sales-quotation/types/customer"
 import type { QuotationLine } from "@/features/sales-quotation/types/quotation-line"
 import type { QuotationForm } from "@/features/sales-quotation/types/quotation"
 import { calculateQuotationTotals } from "@/features/sales-quotation/utils/quotationTotals"
+
+type FormMode = "idle" | "create" | "view" | "edit"
 
 function getTodayForDateInput() {
   const now = new Date()
@@ -62,7 +69,9 @@ function validationMessages(value: unknown, field = ""): string[] {
 }
 
 export function SalesQuotationCreatePage() {
-  const [isEditing, setIsEditing] = useState(false)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [formMode, setFormMode] = useState<FormMode>("idle")
+  const [loadedQuotationId, setLoadedQuotationId] = useState<number | null>(null)
   const [form, setForm] = useState<QuotationForm>(createInitialForm)
   const [lines, setLines] = useState<QuotationLine[]>(() => [
     createQuotationLine(),
@@ -75,6 +84,9 @@ export function SalesQuotationCreatePage() {
   const [activePrintDocument, setActivePrintDocument] =
     useState<PrintableSalesDocument | null>(null)
   const [isPrintOpen, setIsPrintOpen] = useState(false)
+  const isEditing = formMode === "create" || formMode === "edit"
+  const isLoadedView = formMode === "view"
+  const isUpdating = formMode === "edit" && loadedQuotationId !== null
   const totals = useMemo(() => calculateQuotationTotals(lines), [lines])
 
   const selectedCustomer = useMemo<Customer | undefined>(() => {
@@ -133,19 +145,77 @@ export function SalesQuotationCreatePage() {
     setForm(createInitialForm())
     setLines([createQuotationLine()])
     setSaveError("")
+    setLoadedQuotationId(null)
   }
 
   function startNewQuotation() {
     resetQuotation()
+    setSearchParams({})
     setSuccessMessage("")
     setSavedPrintDocument(null)
-    setIsEditing(true)
+    setFormMode("create")
   }
 
   function cancelQuotation() {
     resetQuotation()
+    setSearchParams({})
     setSuccessMessage("")
-    setIsEditing(false)
+    setFormMode("idle")
+  }
+
+  function loadQuotationIntoForm(quotation: Awaited<ReturnType<typeof getQuotation>>) {
+    setLoadedQuotationId(quotation.id)
+    setForm({
+      quotationDate: quotation.quotation_date,
+      customerId: quotation.customer_id,
+      customerCode: quotation.customer_code,
+      customerName: quotation.customer_name,
+      customerRefNo: quotation.customer_ref_no,
+      salesExecutive: quotation.sales_executive,
+      attention: quotation.attention,
+      payTerms: quotation.pay_terms,
+      deliveryPlace: quotation.delivery_place,
+      currency: quotation.currency,
+      exchangeRate: quotation.exchange_rate,
+      notes: quotation.notes,
+    })
+    setLines(
+      quotation.lines.map((line) => ({
+        localId: crypto.randomUUID(),
+        itemUnitId: line.item_unit_id,
+        itemCode: line.item_code,
+        itemName: line.item_name,
+        description: line.description,
+        unit: line.unit,
+        quantity: line.quantity,
+        rate: line.rate,
+        defaultRate: line.rate,
+        discountPercentage: line.discount_percentage,
+        discountAmount: line.discount_amount,
+        vatPercentage: line.vat_percentage,
+        vatAmount: line.vat_amount,
+        netAmount: line.net_amount,
+        netAfterVat: line.net_after_vat,
+      })),
+    )
+    setSavedPrintDocument(savedQuotationDocument(quotation))
+    setFormMode("view")
+  }
+
+  function handlePrimaryAction() {
+    if (formMode === "view") {
+      setSuccessMessage("")
+      setSaveError("")
+      setFormMode("edit")
+      return
+    }
+
+    if (formMode === "edit") {
+      void saveQuotation()
+      return
+    }
+
+    startNewQuotation()
   }
 
   async function saveQuotation() {
@@ -156,14 +226,22 @@ export function SalesQuotationCreatePage() {
     setIsSaving(true)
 
     try {
-      const payload = mapQuotationPayload(form, lines)
-      const quotation = await createQuotation(payload)
+      const payload = mapQuotationPayload(form, lines, {
+        includeRates: isUpdating,
+      })
+      const quotation =
+        isUpdating && loadedQuotationId !== null
+          ? await updateQuotation(loadedQuotationId, payload)
+          : await createQuotation(payload)
 
       setSavedPrintDocument(savedQuotationDocument(quotation))
       resetQuotation()
-      setIsEditing(false)
+      setSearchParams({})
+      setFormMode("idle")
       setSuccessMessage(
-        `Quotation ${quotation.quotation_no} was created successfully.`,
+        isUpdating
+          ? `Quotation ${quotation.quotation_no} was updated successfully.`
+          : `Quotation ${quotation.quotation_no} was created successfully.`,
       )
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
@@ -196,6 +274,37 @@ export function SalesQuotationCreatePage() {
     setActivePrintDocument(savedPrintDocument)
     setIsPrintOpen(true)
   }
+
+  useEffect(() => {
+    const id = Number(searchParams.get("id"))
+    if (!Number.isInteger(id) || id <= 0) return
+
+    let isCurrent = true
+    setSaveError("")
+    setSuccessMessage("")
+
+    async function loadQuotation() {
+      try {
+        const quotation = await getQuotation(id)
+        if (isCurrent) loadQuotationIntoForm(quotation)
+      } catch {
+        if (isCurrent) {
+          resetQuotation()
+          setFormMode("idle")
+          setSaveError("Unable to load the selected quotation.")
+        }
+      }
+    }
+
+    void loadQuotation()
+
+    return () => {
+      isCurrent = false
+    }
+  }, [searchParams])
+
+  const primaryLabel =
+    formMode === "view" ? "Edit" : formMode === "edit" ? "Update" : "New"
 
   return (
     <div className="flex h-[calc(100vh-68px)] flex-col bg-[#f4f6fa] overflow-hidden">
@@ -234,8 +343,12 @@ export function SalesQuotationCreatePage() {
               : "border-[#ffeeba] bg-[#fff4cc] text-[#856404]"
           }`}>
             {isEditing
-              ? "New quotation mode — complete the form and click Save."
-              : "Click New to enable the quotation form."}
+              ? isUpdating
+                ? "Edit mode — update the draft quotation and click Update."
+                : "New quotation mode — complete the form and click Save."
+              : isLoadedView
+                ? "View mode — click Edit to modify this draft quotation."
+                : "Click New to enable the quotation form."}
           </div>
 
           <fieldset
@@ -265,7 +378,9 @@ export function SalesQuotationCreatePage() {
         isSaving={isSaving}
         canPreview={isEditing && lines.some((line) => line.itemUnitId !== undefined)}
         canPrint={savedPrintDocument !== null}
-        onNew={startNewQuotation}
+        primaryLabel={primaryLabel}
+        canSave={formMode === "create"}
+        onPrimary={handlePrimaryAction}
         onSave={saveQuotation}
         onPreview={previewQuotation}
         onPrint={printSavedQuotation}

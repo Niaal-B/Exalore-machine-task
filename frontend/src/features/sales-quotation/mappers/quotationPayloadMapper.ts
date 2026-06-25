@@ -5,6 +5,7 @@ import type { QuotationForm } from "@/features/sales-quotation/types/quotation"
 export function mapQuotationPayload(
   form: QuotationForm,
   lines: QuotationLine[],
+  options: { includeRates?: boolean } = {},
 ): CreateQuotationPayload {
   if (form.customerId === undefined) {
     throw new Error("Select a customer before saving the quotation.")
@@ -29,7 +30,8 @@ export function mapQuotationPayload(
       item_unit_id: line.itemUnitId as number,
       quantity: line.quantity,
       discount_percentage: line.discountPercentage || "0",
-      ...(line.defaultRate !== undefined && line.rate !== line.defaultRate
+      ...(options.includeRates ||
+      (line.defaultRate !== undefined && line.rate !== line.defaultRate)
         ? { rate: line.rate }
         : {}),
     })),

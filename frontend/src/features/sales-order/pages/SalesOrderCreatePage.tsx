@@ -1,5 +1,6 @@
 import axios from "axios"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { useSearchParams } from "react-router-dom"
 
 import { SalesDocumentPrintDialog } from "@/features/sales-documents/components/SalesDocumentPrintDialog"
 import {
@@ -12,13 +13,19 @@ import { OrderItemsSection } from "@/features/sales-order/components/OrderItemsS
 import { OrderTotalsSection } from "@/features/sales-order/components/OrderTotalsSection"
 import { SalesOrderHeaderSection } from "@/features/sales-order/components/SalesOrderHeaderSection"
 import { mapSalesOrderPayload } from "@/features/sales-order/mappers/salesOrderPayloadMapper"
-import { createSalesOrder } from "@/features/sales-order/services/salesOrderService"
+import {
+  createSalesOrder,
+  getSalesOrder,
+  updateSalesOrder,
+} from "@/features/sales-order/services/salesOrderService"
 import { QuotationToast } from "@/features/sales-quotation/components/QuotationToast"
 import type { QuotationDetail } from "@/features/sales-order/types/quotation-detail"
 import type {
   SalesOrderForm,
 } from "@/features/sales-order/types/sales-order"
 import { calculateQuotationTotals } from "@/features/sales-quotation/utils/quotationTotals"
+
+type FormMode = "idle" | "create" | "view" | "edit"
 
 function todayForInput() {
   const now = new Date()
@@ -65,7 +72,9 @@ function validationMessages(value: unknown, field = ""): string[] {
 }
 
 export function SalesOrderCreatePage() {
-  const [isEditing, setIsEditing] = useState(false)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [formMode, setFormMode] = useState<FormMode>("idle")
+  const [loadedSalesOrderId, setLoadedSalesOrderId] = useState<number | null>(null)
   const [form, setForm] = useState<SalesOrderForm>(createInitialForm)
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState("")
@@ -75,6 +84,9 @@ export function SalesOrderCreatePage() {
   const [activePrintDocument, setActivePrintDocument] =
     useState<PrintableSalesDocument | null>(null)
   const [isPrintOpen, setIsPrintOpen] = useState(false)
+  const isEditing = formMode === "create" || formMode === "edit"
+  const isLoadedView = formMode === "view"
+  const isUpdating = formMode === "edit" && loadedSalesOrderId !== null
   const totals = useMemo(
     () => calculateQuotationTotals(form.lines),
     [form.lines],
@@ -122,13 +134,15 @@ export function SalesOrderCreatePage() {
   function resetForm() {
     setForm(createInitialForm())
     setSaveError("")
+    setLoadedSalesOrderId(null)
   }
 
   function startNewOrder() {
     resetForm()
+    setSearchParams({})
     setSuccessMessage("")
     setSavedPrintDocument(null)
-    setIsEditing(true)
+    setFormMode("create")
   }
 
   function clearOrder() {
@@ -138,8 +152,73 @@ export function SalesOrderCreatePage() {
 
   function cancelOrder() {
     resetForm()
+    setSearchParams({})
     setSuccessMessage("")
-    setIsEditing(false)
+    setFormMode("idle")
+  }
+
+  function loadSalesOrderIntoForm(
+    salesOrder: Awaited<ReturnType<typeof getSalesOrder>>,
+  ) {
+    setLoadedSalesOrderId(salesOrder.id)
+    setForm({
+      salesOrderNo: salesOrder.sales_order_no,
+      salesOrderType: salesOrder.sales_order_type,
+      issueDate: salesOrder.issue_date,
+      validDate: salesOrder.valid_date ?? "",
+      quotationId: salesOrder.quotation_id ?? undefined,
+      quotationNo: salesOrder.quotation_id
+        ? `Quotation #${salesOrder.quotation_id}`
+        : "",
+      linkedQuotationLabel: salesOrder.quotation_id
+        ? `Quotation #${salesOrder.quotation_id}`
+        : "No quotation linked",
+      customerPo: salesOrder.customer_po,
+      customerId: salesOrder.customer_id,
+      customerCode: salesOrder.customer_code,
+      customerName: salesOrder.customer_name,
+      customerRefNo: salesOrder.customer_po,
+      salesExecutive: salesOrder.sales_executive,
+      deliveryPlace: salesOrder.delivery_place,
+      currency: salesOrder.currency,
+      exchangeRate: salesOrder.exchange_rate,
+      notes: salesOrder.notes,
+      lines: salesOrder.lines.map((line) => ({
+        localId: crypto.randomUUID(),
+        itemUnitId: line.item_unit_id,
+        itemCode: line.item_code,
+        itemName: line.item_name,
+        description: line.description,
+        unit: line.unit,
+        quantity: line.quantity,
+        rate: line.rate,
+        defaultRate: line.rate,
+        discountPercentage: line.discount_percentage,
+        discountAmount: line.discount_amount,
+        vatPercentage: line.vat_percentage,
+        vatAmount: line.vat_amount,
+        netAmount: line.net_amount,
+        netAfterVat: line.net_after_vat,
+      })),
+    })
+    setSavedPrintDocument(savedSalesOrderDocument(salesOrder))
+    setFormMode("view")
+  }
+
+  function handlePrimaryAction() {
+    if (formMode === "view") {
+      setSuccessMessage("")
+      setSaveError("")
+      setFormMode("edit")
+      return
+    }
+
+    if (formMode === "edit") {
+      void saveSalesOrder()
+      return
+    }
+
+    startNewOrder()
   }
 
   async function saveSalesOrder() {
@@ -150,12 +229,18 @@ export function SalesOrderCreatePage() {
     setSuccessMessage("")
     try {
       const payload = mapSalesOrderPayload(form)
-      const salesOrder = await createSalesOrder(payload)
+      const salesOrder =
+        isUpdating && loadedSalesOrderId !== null
+          ? await updateSalesOrder(loadedSalesOrderId, payload)
+          : await createSalesOrder(payload)
       setSavedPrintDocument(savedSalesOrderDocument(salesOrder))
       resetForm()
-      setIsEditing(false)
+      setSearchParams({})
+      setFormMode("idle")
       setSuccessMessage(
-        `Sales order ${salesOrder.sales_order_no} was created successfully.`,
+        isUpdating
+          ? `Sales order ${salesOrder.sales_order_no} was updated successfully.`
+          : `Sales order ${salesOrder.sales_order_no} was created successfully.`,
       )
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
@@ -188,6 +273,37 @@ export function SalesOrderCreatePage() {
     setActivePrintDocument(savedPrintDocument)
     setIsPrintOpen(true)
   }
+
+  useEffect(() => {
+    const id = Number(searchParams.get("id"))
+    if (!Number.isInteger(id) || id <= 0) return
+
+    let isCurrent = true
+    setSaveError("")
+    setSuccessMessage("")
+
+    async function loadSalesOrder() {
+      try {
+        const salesOrder = await getSalesOrder(id)
+        if (isCurrent) loadSalesOrderIntoForm(salesOrder)
+      } catch {
+        if (isCurrent) {
+          resetForm()
+          setFormMode("idle")
+          setSaveError("Unable to load the selected sales order.")
+        }
+      }
+    }
+
+    void loadSalesOrder()
+
+    return () => {
+      isCurrent = false
+    }
+  }, [searchParams])
+
+  const primaryLabel =
+    formMode === "view" ? "Edit" : formMode === "edit" ? "Update" : "New"
 
   return (
     <div className="flex h-[calc(100vh-68px)] min-w-0 flex-col overflow-hidden bg-[#f4f6fa]">
@@ -227,8 +343,12 @@ export function SalesOrderCreatePage() {
               : "border-amber-200 bg-amber-50 text-amber-700"
           }`}>
             {isEditing
-              ? "New sales order mode — complete the form and click Save."
-              : "Click New to enable the sales order form."}
+              ? isUpdating
+                ? "Edit mode — update the draft sales order and click Update."
+                : "New sales order mode — complete the form and click Save."
+              : isLoadedView
+                ? "View mode — click Edit to modify this draft sales order."
+                : "Click New to enable the sales order form."}
           </div>
           <fieldset
             disabled={!isEditing || isSaving}
@@ -252,7 +372,9 @@ export function SalesOrderCreatePage() {
         isSaving={isSaving}
         canPreview={isEditing && form.lines.length > 0}
         canPrint={savedPrintDocument !== null}
-        onNew={startNewOrder}
+        primaryLabel={primaryLabel}
+        canSave={formMode === "create"}
+        onPrimary={handlePrimaryAction}
         onSave={saveSalesOrder}
         onPreview={previewSalesOrder}
         onPrint={printSavedSalesOrder}

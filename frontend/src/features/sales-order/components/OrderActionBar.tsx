@@ -6,7 +6,9 @@ type OrderActionBarProps = {
   isSaving: boolean
   canPreview: boolean
   canPrint: boolean
-  onNew: () => void
+  primaryLabel: string
+  canSave: boolean
+  onPrimary: () => void
   onSave: () => void
   onPreview: () => void
   onPrint: () => void
@@ -19,7 +21,9 @@ export function OrderActionBar({
   isSaving,
   canPreview,
   canPrint,
-  onNew,
+  primaryLabel,
+  canSave,
+  onPrimary,
   onSave,
   onPreview,
   onPrint,
@@ -32,13 +36,13 @@ export function OrderActionBar({
         type="button"
         disabled={isSaving}
         className="h-8 bg-indigo-600 px-5 text-xs text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
-        onClick={onNew}
+        onClick={onPrimary}
       >
-        New
+        {isSaving && primaryLabel === "Update" ? "Updating..." : primaryLabel}
       </Button>
       <Button
         type="button"
-        disabled={!isEditing || isSaving}
+        disabled={!canSave || !isEditing || isSaving}
         className="h-8 bg-emerald-600 px-5 text-xs text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
         onClick={onSave}
       >

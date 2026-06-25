@@ -12,6 +12,26 @@ export async function createSalesOrder(
   return response.data
 }
 
+export async function getSalesOrder(
+  id: number,
+): Promise<CreateSalesOrderResponse> {
+  const response = await apiClient.get<CreateSalesOrderResponse>(
+    `/api/sales-orders/${id}/`,
+  )
+  return response.data
+}
+
+export async function updateSalesOrder(
+  id: number,
+  payload: CreateSalesOrderPayload,
+): Promise<CreateSalesOrderResponse> {
+  const response = await apiClient.patch<CreateSalesOrderResponse>(
+    `/api/sales-orders/${id}/`,
+    payload,
+  )
+  return response.data
+}
+
 export async function listSalesOrders(params: {
   search?: string
   status?: string

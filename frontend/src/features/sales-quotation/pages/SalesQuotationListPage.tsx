@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { Download } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
 import { Select } from "@/components/ui/select"
@@ -13,6 +14,7 @@ import type { CreateQuotationResponse } from "@/features/sales-quotation/types/c
 const COLUMNS = ["Quotation No", "Date", "Customer Code", "Customer Name", "Currency", "Net After VAT", "Status", "PDF"]
 
 export function SalesQuotationListPage() {
+  const navigate = useNavigate()
   const [search, setSearch] = useState("")
   const [status, setStatus] = useState("")
   const [records, setRecords] = useState<CreateQuotationResponse[]>([])
@@ -41,7 +43,11 @@ export function SalesQuotationListPage() {
       filters={<Select value={status} className="h-9 w-40 text-xs" onChange={(event) => setStatus(event.target.value)}><option value="">All statuses</option><option value="draft">Draft</option><option value="confirmed">Confirmed</option><option value="cancelled">Cancelled</option></Select>}
       columns={COLUMNS} isLoading={isLoading} error={error} isEmpty={records.length === 0} resultCount={records.length}>
       {records.map((record) => (
-        <TableRow key={record.id} className="border-b border-slate-100 hover:bg-slate-50">
+        <TableRow
+          key={record.id}
+          className="cursor-pointer border-b border-slate-100 hover:bg-slate-50"
+          onClick={() => navigate(`/sales-quotations/new?id=${record.id}`)}
+        >
           {[record.quotation_no, record.quotation_date, record.customer_code, record.customer_name, record.currency, record.net_after_vat, record.status].map((value, index) => (
             <TableCell key={`${record.id}-${index}`} className={`whitespace-nowrap px-4 py-3 text-xs text-slate-700 ${index === 5 ? "text-right font-semibold" : ""}`}>{value}</TableCell>
           ))}
@@ -51,7 +57,10 @@ export function SalesQuotationListPage() {
               variant="outline"
               size="sm"
               className="h-8 text-xs text-indigo-700"
-              onClick={() => printSalesDocument(savedQuotationDocument(record))}
+              onClick={(event) => {
+                event.stopPropagation()
+                printSalesDocument(savedQuotationDocument(record))
+              }}
             >
               <Download size={13} /> PDF
             </Button>

@@ -12,6 +12,26 @@ export async function createQuotation(
   return response.data
 }
 
+export async function getQuotation(
+  id: number,
+): Promise<CreateQuotationResponse> {
+  const response = await apiClient.get<CreateQuotationResponse>(
+    `/api/quotations/${id}/`,
+  )
+  return response.data
+}
+
+export async function updateQuotation(
+  id: number,
+  payload: CreateQuotationPayload,
+): Promise<CreateQuotationResponse> {
+  const response = await apiClient.patch<CreateQuotationResponse>(
+    `/api/quotations/${id}/`,
+    payload,
+  )
+  return response.data
+}
+
 export async function listQuotations(params: {
   search?: string
   status?: string

@@ -48,6 +48,8 @@ if render_hostname:
 INSTALLED_APPS = [
     'items.apps.ItemsConfig',
     'sales.apps.SalesConfig',
+    'cloudinary_storage',
+    'cloudinary',
     'rest_framework',
     'drf_spectacular',
     'corsheaders',
@@ -139,9 +141,26 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+USE_CLOUDINARY = (
+    bool(os.getenv("CLOUDINARY_URL"))
+    or all(
+        os.getenv(name)
+        for name in (
+            "CLOUDINARY_CLOUD_NAME",
+            "CLOUDINARY_API_KEY",
+            "CLOUDINARY_API_SECRET",
+        )
+    )
+)
+
 STORAGES = {
     "default": {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
+        "BACKEND": (
+            "cloudinary_storage.storage.MediaCloudinaryStorage"
+            if USE_CLOUDINARY
+            else "django.core.files.storage.FileSystemStorage"
+        ),
     },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
@@ -150,7 +169,17 @@ STORAGES = {
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
-SERVE_MEDIA_FILES = os.getenv("DJANGO_SERVE_MEDIA", "false").lower() == "true"
+SERVE_MEDIA_FILES = (
+    os.getenv("DJANGO_SERVE_MEDIA", "false").lower() == "true"
+    and not USE_CLOUDINARY
+)
+
+if USE_CLOUDINARY and not os.getenv("CLOUDINARY_URL"):
+    CLOUDINARY_STORAGE = {
+        "CLOUD_NAME": os.getenv("CLOUDINARY_CLOUD_NAME"),
+        "API_KEY": os.getenv("CLOUDINARY_API_KEY"),
+        "API_SECRET": os.getenv("CLOUDINARY_API_SECRET"),
+    }
 
 SALES_DEFAULT_VAT_PERCENTAGE = "15.0000"
 

@@ -31,4 +31,9 @@ export interface PrintableSalesDocument {
     vatAmount: string
     netAfterVat: string
   }
+  template?: {
+    headerImageUrl: string | null
+    footerImageUrl: string | null
+    primaryColor: string
+  }
 }

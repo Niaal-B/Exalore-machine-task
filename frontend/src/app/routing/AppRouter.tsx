@@ -9,6 +9,7 @@ import { SalesOrderCreatePage } from "@/features/sales-order/pages/SalesOrderCre
 import { SalesOrderListPage } from "@/features/sales-order/pages/SalesOrderListPage"
 import { SalesQuotationCreatePage } from "@/features/sales-quotation/pages/SalesQuotationCreatePage"
 import { SalesQuotationListPage } from "@/features/sales-quotation/pages/SalesQuotationListPage"
+import { PrintTemplateSettingsPage } from "@/features/print-settings/pages/PrintTemplateSettingsPage"
 
 export function AppRouter() {
   return (
@@ -23,6 +24,7 @@ export function AppRouter() {
           <Route path="/sales-quotations" element={<SalesQuotationListPage />} />
           <Route path="/sales-orders/new" element={<SalesOrderCreatePage />} />
           <Route path="/sales-orders" element={<SalesOrderListPage />} />
+          <Route path="/settings/print-template" element={<PrintTemplateSettingsPage />} />
         </Route>
       </Route>
     </Routes>

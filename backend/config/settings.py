@@ -150,6 +150,7 @@ STORAGES = {
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+SERVE_MEDIA_FILES = os.getenv("DJANGO_SERVE_MEDIA", "false").lower() == "true"
 
 SALES_DEFAULT_VAT_PERCENTAGE = "15.0000"
 

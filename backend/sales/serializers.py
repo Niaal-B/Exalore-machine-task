@@ -13,6 +13,7 @@ from .document_utils import (
 )
 from .models import (
     Customer,
+    PrintTemplateSetting,
     SalesOrder,
     SalesOrderLine,
     SalesQuotation,
@@ -477,3 +478,46 @@ class CustomerSerializer(serializers.ModelSerializer):
         model = Customer
         fields = ("id", "code", "name")
         read_only_fields = fields
+
+
+class PrintTemplateSettingSerializer(serializers.ModelSerializer):
+    header_image_url = serializers.SerializerMethodField()
+    footer_image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PrintTemplateSetting
+        fields = (
+            "header_image",
+            "footer_image",
+            "primary_color",
+            "header_image_url",
+            "footer_image_url",
+            "updated_at",
+        )
+        read_only_fields = ("header_image_url", "footer_image_url", "updated_at")
+
+    def validate_primary_color(self, value):
+        if not value.startswith("#") or len(value) != 7:
+            raise serializers.ValidationError(
+                "Enter a valid hex color like #312e81."
+            )
+        try:
+            int(value[1:], 16)
+        except ValueError as exc:
+            raise serializers.ValidationError(
+                "Enter a valid hex color like #312e81."
+            ) from exc
+        return value.lower()
+
+    def _absolute_file_url(self, file_field):
+        if not file_field:
+            return None
+        request = self.context.get("request")
+        url = file_field.url
+        return request.build_absolute_uri(url) if request else url
+
+    def get_header_image_url(self, obj):
+        return self._absolute_file_url(obj.header_image)
+
+    def get_footer_image_url(self, obj):
+        return self._absolute_file_url(obj.footer_image)

@@ -6,6 +6,7 @@ import {
   Package,
   PanelLeftClose,
   ReceiptText,
+  Settings,
   UserRound,
   X,
 } from "lucide-react"
@@ -36,6 +37,12 @@ const navSections: { label: string; items: NavItem[] }[] = [
       { label: "Sales Orders", icon: ReceiptText, href: "/sales-orders/new" },
     ],
   },
+  {
+    label: "Settings",
+    items: [
+      { label: "Print Template", icon: Settings, href: "/settings/print-template" },
+    ],
+  },
 ]
 
 const routeLabels = [
@@ -46,6 +53,7 @@ const routeLabels = [
     page: "Sales Quotations",
   },
   { path: "/sales-orders", section: "Sales", page: "Sales Orders" },
+  { path: "/settings/print-template", section: "Settings", page: "Print Template" },
 ]
 
 export function ErpLayout() {

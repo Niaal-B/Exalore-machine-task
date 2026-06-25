@@ -1,4 +1,5 @@
 import { Building2, Download, Printer } from "lucide-react"
+import { useEffect, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -10,6 +11,8 @@ import {
 } from "@/components/ui/dialog"
 import type { PrintableSalesDocument } from "@/features/sales-documents/types/printable-sales-document"
 import { printSalesDocument } from "@/features/sales-documents/utils/printSalesDocument"
+import { getPrintTemplate } from "@/features/print-settings/services/printTemplateService"
+import type { PrintTemplateSetting } from "@/features/print-settings/types/print-template"
 
 type SalesDocumentPrintDialogProps = {
   document: PrintableSalesDocument | null
@@ -22,12 +25,57 @@ function money(value: string, currency: string) {
   return `${Number.isFinite(parsed) ? parsed.toFixed(4) : value} ${currency}`
 }
 
+function getReadableTextColor(hexColor: string) {
+  const normalized = /^#[0-9a-fA-F]{6}$/.test(hexColor)
+    ? hexColor
+    : "#312e81"
+  const red = Number.parseInt(normalized.slice(1, 3), 16)
+  const green = Number.parseInt(normalized.slice(3, 5), 16)
+  const blue = Number.parseInt(normalized.slice(5, 7), 16)
+  const luminance = (0.299 * red + 0.587 * green + 0.114 * blue) / 255
+
+  return luminance > 0.62 ? "#0f172a" : "#ffffff"
+}
+
 export function SalesDocumentPrintDialog({
   document,
   open,
   onOpenChange,
 }: SalesDocumentPrintDialogProps) {
+  const [template, setTemplate] = useState<PrintTemplateSetting | null>(null)
+
+  useEffect(() => {
+    if (!open) return
+    let current = true
+
+    async function loadTemplate() {
+      try {
+        const latestTemplate = await getPrintTemplate()
+        if (current) setTemplate(latestTemplate)
+      } catch {
+        if (current) setTemplate(null)
+      }
+    }
+
+    void loadTemplate()
+
+    return () => {
+      current = false
+    }
+  }, [open])
+
   if (!document) return null
+
+  const documentWithTemplate: PrintableSalesDocument = {
+    ...document,
+    template: {
+      headerImageUrl: template?.headerImageUrl ?? null,
+      footerImageUrl: template?.footerImageUrl ?? null,
+      primaryColor: template?.primaryColor ?? "#312e81",
+    },
+  }
+  const primaryColor = documentWithTemplate.template?.primaryColor ?? "#312e81"
+  const primaryTextColor = getReadableTextColor(primaryColor)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -39,7 +87,7 @@ export function SalesDocumentPrintDialog({
               Review the document, then print or save it as a PDF.
             </DialogDescription>
           </div>
-          <Button type="button" className="bg-indigo-600 text-white hover:bg-indigo-700" onClick={() => printSalesDocument(document)}>
+          <Button type="button" className="bg-indigo-600 text-white hover:bg-indigo-700" onClick={() => printSalesDocument(documentWithTemplate)}>
             <Printer size={15} /> Print / Save PDF
           </Button>
         </DialogHeader>
@@ -54,31 +102,64 @@ export function SalesDocumentPrintDialog({
           )}
 
           <div className="relative z-10">
-            <header className="bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950 px-10 py-9 text-white">
-              <div className="flex items-start justify-between gap-8">
-                <div className="flex items-center gap-4">
-                  <div className="grid h-14 w-14 place-items-center rounded-xl bg-white/10 ring-1 ring-white/20">
-                    <Building2 size={27} />
-                  </div>
+            {documentWithTemplate.template?.headerImageUrl ? (
+              <>
+                <header className="border-b border-slate-200 bg-white">
+                  <img
+                    src={documentWithTemplate.template.headerImageUrl}
+                    alt="Document header"
+                    className="h-32 w-full object-cover"
+                  />
+                </header>
+                <div className="flex items-center justify-between border-b border-slate-200 px-10 py-4">
                   <div>
-                    <h2 className="text-2xl font-bold tracking-wide">EXALORE</h2>
-                    <p className="mt-1 text-xs uppercase tracking-[0.25em] text-slate-300">Enterprise Resource Planning</p>
+                    <p
+                      className="text-[10px] font-bold uppercase tracking-[0.22em]"
+                      style={{ color: primaryColor }}
+                    >
+                      {document.title}
+                    </p>
+                    <p className="mt-1 text-lg font-bold text-slate-900">
+                      {document.documentNumber}
+                    </p>
                   </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs uppercase tracking-[0.22em] text-indigo-200">{document.title}</p>
-                  <p className="mt-2 text-xl font-semibold">{document.documentNumber}</p>
-                  <span className="mt-3 inline-block rounded-full bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider ring-1 ring-white/20">
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-600">
                     {document.status}
                   </span>
                 </div>
-              </div>
-            </header>
+              </>
+            ) : (
+              <header className="bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950 px-10 py-9 text-white">
+                <div className="flex items-start justify-between gap-8">
+                  <div className="flex items-center gap-4">
+                    <div className="grid h-14 w-14 place-items-center rounded-xl bg-white/10 ring-1 ring-white/20">
+                      <Building2 size={27} />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold tracking-wide">EXALORE</h2>
+                      <p className="mt-1 text-xs uppercase tracking-[0.25em] text-slate-300">Enterprise Resource Planning</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs uppercase tracking-[0.22em] text-indigo-200">{document.title}</p>
+                    <p className="mt-2 text-xl font-semibold">{document.documentNumber}</p>
+                    <span className="mt-3 inline-block rounded-full bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider ring-1 ring-white/20">
+                      {document.status}
+                    </span>
+                  </div>
+                </div>
+              </header>
+            )}
 
             <div className="px-10 py-8">
               <section className="grid grid-cols-2 gap-8 border-b border-slate-200 pb-7">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-600">Bill To</p>
+                  <p
+                    className="text-[10px] font-bold uppercase tracking-[0.2em]"
+                    style={{ color: primaryColor }}
+                  >
+                    Bill To
+                  </p>
                   <h3 className="mt-3 text-lg font-bold text-slate-900">{document.customerName || "Customer not selected"}</h3>
                   <p className="mt-1 text-sm text-slate-500">{document.customerCode || "—"}</p>
                 </div>
@@ -127,7 +208,16 @@ export function SalesDocumentPrintDialog({
                   <div className="flex justify-between"><dt className="text-slate-500">Discount</dt><dd className="font-medium">{money(document.totals.discountAmount, document.currency)}</dd></div>
                   <div className="flex justify-between"><dt className="text-slate-500">Net Amount</dt><dd className="font-medium">{money(document.totals.netAmount, document.currency)}</dd></div>
                   <div className="flex justify-between"><dt className="text-slate-500">VAT Amount</dt><dd className="font-medium">{money(document.totals.vatAmount, document.currency)}</dd></div>
-                  <div className="flex justify-between border-t border-slate-300 pt-3 text-base"><dt className="font-bold text-slate-900">Total</dt><dd className="font-bold text-indigo-700">{money(document.totals.netAfterVat, document.currency)}</dd></div>
+                  <div
+                    className="flex justify-between rounded-b-lg px-4 py-3 text-base text-white"
+                    style={{
+                      backgroundColor: primaryColor,
+                      color: primaryTextColor,
+                    }}
+                  >
+                    <dt className="font-bold">Total</dt>
+                    <dd className="font-bold">{money(document.totals.netAfterVat, document.currency)}</dd>
+                  </div>
                 </dl>
               </section>
 
@@ -137,10 +227,20 @@ export function SalesDocumentPrintDialog({
               </section>
             </div>
 
-            <footer className="absolute bottom-0 left-0 right-0 flex items-center justify-between border-t border-slate-200 px-10 py-4 text-[10px] text-slate-400">
-              <span>Generated by Exalore ERP</span>
-              <span className="flex items-center gap-1"><Download size={11} /> Official business document</span>
-            </footer>
+            {documentWithTemplate.template?.footerImageUrl ? (
+              <footer className="absolute bottom-0 left-0 right-0 border-t border-slate-200 bg-white">
+                <img
+                  src={documentWithTemplate.template.footerImageUrl}
+                  alt="Document footer"
+                  className="h-20 w-full object-contain"
+                />
+              </footer>
+            ) : (
+              <footer className="absolute bottom-0 left-0 right-0 flex items-center justify-between border-t border-slate-200 px-10 py-4 text-[10px] text-slate-400">
+                <span>Generated by Exalore ERP</span>
+                <span className="flex items-center gap-1"><Download size={11} /> Official business document</span>
+              </footer>
+            )}
           </div>
         </article>
       </DialogContent>

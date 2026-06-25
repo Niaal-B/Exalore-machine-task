@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Select } from "@/components/ui/select"
 import { TableCell, TableRow } from "@/components/ui/table"
 import { EntityListPage } from "@/features/entity-list/components/EntityListPage"
+import { getPrintTemplate } from "@/features/print-settings/services/printTemplateService"
 import { savedQuotationDocument } from "@/features/sales-documents/mappers/printableDocumentMappers"
 import { printSalesDocument } from "@/features/sales-documents/utils/printSalesDocument"
 import { listQuotations } from "@/features/sales-quotation/services/quotationService"
@@ -20,6 +21,22 @@ export function SalesQuotationListPage() {
   const [records, setRecords] = useState<CreateQuotationResponse[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
+
+  async function printQuotationPdf(record: CreateQuotationResponse) {
+    try {
+      const template = await getPrintTemplate()
+      printSalesDocument({
+        ...savedQuotationDocument(record),
+        template: {
+          headerImageUrl: template.headerImageUrl,
+          footerImageUrl: template.footerImageUrl,
+          primaryColor: template.primaryColor,
+        },
+      })
+    } catch {
+      printSalesDocument(savedQuotationDocument(record))
+    }
+  }
 
   useEffect(() => {
     let current = true
@@ -59,7 +76,7 @@ export function SalesQuotationListPage() {
               className="h-8 text-xs text-indigo-700"
               onClick={(event) => {
                 event.stopPropagation()
-                printSalesDocument(savedQuotationDocument(record))
+                void printQuotationPdf(record)
               }}
             >
               <Download size={13} /> PDF

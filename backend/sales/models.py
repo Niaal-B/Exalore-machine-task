@@ -24,6 +24,45 @@ class Customer(models.Model):
         return f"{self.code} - {self.name}"
 
 
+class PrintTemplateSetting(models.Model):
+    """Global header and footer images used for printable sales documents."""
+
+    header_image = models.ImageField(
+        upload_to="print-templates/",
+        blank=True,
+        null=True,
+        help_text="Header image shown at the top of quotation and sales order PDFs.",
+    )
+    footer_image = models.ImageField(
+        upload_to="print-templates/",
+        blank=True,
+        null=True,
+        help_text="Footer image shown at the bottom of quotation and sales order PDFs.",
+    )
+    primary_color = models.CharField(
+        max_length=7,
+        default="#312e81",
+        help_text="Primary hex color used for PDF highlights and totals.",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "print template setting"
+        verbose_name_plural = "print template settings"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_solo(cls):
+        setting, _ = cls.objects.get_or_create(pk=1)
+        return setting
+
+    def __str__(self) -> str:
+        return "Print Template Settings"
+
+
 class SalesQuotation(models.Model):
     """A customer quotation and its historically recorded totals."""
 

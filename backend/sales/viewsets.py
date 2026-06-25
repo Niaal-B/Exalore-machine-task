@@ -1,9 +1,13 @@
 from django.db.models import Prefetch
 from rest_framework import filters, viewsets
 from rest_framework.exceptions import ValidationError
+from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from .models import (
     Customer,
+    PrintTemplateSetting,
     SalesOrder,
     SalesOrderLine,
     SalesQuotation,
@@ -11,6 +15,7 @@ from .models import (
 )
 from .serializers import (
     CustomerSerializer,
+    PrintTemplateSettingSerializer,
     SalesOrderSerializer,
     SalesQuotationSerializer,
 )
@@ -24,6 +29,30 @@ class CustomerViewSet(viewsets.ReadOnlyModelViewSet):
     ordering_fields = ("code", "name")
     ordering = ("code",)
     http_method_names = ("get", "head", "options")
+
+
+class PrintTemplateSettingAPIView(APIView):
+    parser_classes = (MultiPartParser, FormParser)
+
+    def get(self, request):
+        setting = PrintTemplateSetting.get_solo()
+        serializer = PrintTemplateSettingSerializer(
+            setting,
+            context={"request": request},
+        )
+        return Response(serializer.data)
+
+    def patch(self, request):
+        setting = PrintTemplateSetting.get_solo()
+        serializer = PrintTemplateSettingSerializer(
+            setting,
+            data=request.data,
+            partial=True,
+            context={"request": request},
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
 
 
 class SalesQuotationViewSet(viewsets.ModelViewSet):

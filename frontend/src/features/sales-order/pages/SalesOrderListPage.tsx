@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Select } from "@/components/ui/select"
 import { TableCell, TableRow } from "@/components/ui/table"
 import { EntityListPage } from "@/features/entity-list/components/EntityListPage"
+import { getPrintTemplate } from "@/features/print-settings/services/printTemplateService"
 import { savedSalesOrderDocument } from "@/features/sales-documents/mappers/printableDocumentMappers"
 import { printSalesDocument } from "@/features/sales-documents/utils/printSalesDocument"
 import { listSalesOrders } from "@/features/sales-order/services/salesOrderService"
@@ -20,6 +21,22 @@ export function SalesOrderListPage() {
   const [records, setRecords] = useState<CreateSalesOrderResponse[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
+
+  async function printSalesOrderPdf(record: CreateSalesOrderResponse) {
+    try {
+      const template = await getPrintTemplate()
+      printSalesDocument({
+        ...savedSalesOrderDocument(record),
+        template: {
+          headerImageUrl: template.headerImageUrl,
+          footerImageUrl: template.footerImageUrl,
+          primaryColor: template.primaryColor,
+        },
+      })
+    } catch {
+      printSalesDocument(savedSalesOrderDocument(record))
+    }
+  }
 
   useEffect(() => {
     let current = true
@@ -59,7 +76,7 @@ export function SalesOrderListPage() {
               className="h-8 text-xs text-indigo-700"
               onClick={(event) => {
                 event.stopPropagation()
-                printSalesDocument(savedSalesOrderDocument(record))
+                void printSalesOrderPdf(record)
               }}
             >
               <Download size={13} /> PDF

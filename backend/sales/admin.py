@@ -3,7 +3,12 @@ from django.http import JsonResponse
 from django.urls import path
 from items.models import ItemUnit
 
-from .models import Customer, SalesQuotation, SalesQuotationLine
+from .models import (
+    Customer,
+    PrintTemplateSetting,
+    SalesQuotation,
+    SalesQuotationLine,
+)
 
 
 @admin.register(Customer)
@@ -13,6 +18,15 @@ class CustomerAdmin(admin.ModelAdmin):
     list_filter = ("is_active",)
     ordering = ("id",)
     readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(PrintTemplateSetting)
+class PrintTemplateSettingAdmin(admin.ModelAdmin):
+    fields = ("header_image", "footer_image", "updated_at")
+    readonly_fields = ("updated_at",)
+
+    def has_add_permission(self, request):
+        return not PrintTemplateSetting.objects.exists()
 
 
 class SalesQuotationLineInline(admin.TabularInline):
